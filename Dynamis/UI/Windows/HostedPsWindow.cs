@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Numerics;
-using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
@@ -15,6 +14,7 @@ using Dynamis.UI.PsHost;
 using Dynamis.UI.PsHost.Input;
 using Dynamis.UI.PsHost.Output;
 using Dynamis.Utility;
+using ImGuiNET;
 using Microsoft.Extensions.Logging;
 using static Dynamis.Utility.SeStringUtility;
 

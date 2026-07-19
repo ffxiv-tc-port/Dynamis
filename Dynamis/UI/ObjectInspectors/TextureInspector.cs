@@ -1,5 +1,4 @@
 using System.Numerics;
-using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
@@ -7,7 +6,8 @@ using Dynamis.Interop;
 using Dynamis.UI.Windows;
 using Dynamis.Utility;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Kernel;
-using TerraFX.Interop.DirectX;
+using ImGuiNET;
+using SharpDX.Direct3D11;
 
 namespace Dynamis.UI.ObjectInspectors;
 
@@ -53,7 +53,7 @@ public sealed unsafe class TextureInspector(
     {
         DrawAdditionalDetailsCommon(pointer, true);
         ImGui.Image(
-            new((nint)pointer->D3D11ShaderResourceView),
+            (nint)pointer->D3D11ShaderResourceView,
             new Vector2(pointer->ActualWidth, pointer->ActualHeight).Contain(new(128.0f, 128.0f)),
             Vector2.Zero,
             new Vector2(

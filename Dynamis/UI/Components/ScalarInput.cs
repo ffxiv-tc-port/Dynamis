@@ -1,11 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
-using Dalamud.Bindings.ImGui;
 using Dynamis.Utility;
+using ImGuiNET;
 
 namespace Dynamis.UI.Components;
 
-public class ScalarInput<T>(string label, T initialValue = default) : IInput<T> where T : unmanaged, IBinaryNumber<T>
+public class ScalarInput<T>(string label, T initialValue = default) : IInput<T> where T : unmanaged
 {
     [SuppressMessage("ReSharper", "StaticMemberInGenericType")]
     private static readonly ImGuiDataType DataType;
@@ -22,8 +21,12 @@ public class ScalarInput<T>(string label, T initialValue = default) : IInput<T> 
         )).ToImGui(false);
     }
 
-    public bool Draw(ImGuiInputTextFlags flags = ImGuiInputTextFlags.None)
-        => ImGui.InputScalar(label, DataType, ref _value, T.Zero, T.Zero, CFormat, flags);
+    public unsafe bool Draw(ImGuiInputTextFlags flags = ImGuiInputTextFlags.None)
+    {
+        fixed (T* value = &_value) {
+            return ImGui.InputScalar(label, DataType, (nint)value, 0, 0, CFormat, flags);
+        }
+    }
 
     public T GetValue()
         => _value;

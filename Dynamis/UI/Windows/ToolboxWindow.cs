@@ -1,13 +1,12 @@
 ﻿using System.Numerics;
 using System.Reflection;
-using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dynamis.Configuration;
 using Dynamis.Messaging;
-using Dynamis.Utility;
+using ImGuiNET;
 
 namespace Dynamis.UI.Windows;
 

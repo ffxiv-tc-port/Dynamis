@@ -1,5 +1,4 @@
 using System.Numerics;
-using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
@@ -7,6 +6,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using Dynamis.Messaging;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using ImGuiNET;
 
 namespace Dynamis.UI.Windows;
 
