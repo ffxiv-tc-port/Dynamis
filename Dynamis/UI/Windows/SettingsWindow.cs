@@ -29,7 +29,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
     public SettingsWindow(ConfigurationContainer configuration, ImGuiComponents imGuiComponents, IChatGui chatGui,
         MessageHub messageHub, Ipfd ipfd) : base(
-        $"Dynamis {Assembly.GetExecutingAssembly().GetName().Version} Settings###DynamisSettings",
+        $"Dynamis {Assembly.GetExecutingAssembly().GetName().Version} 設定###DynamisSettings",
         ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking
     )
     {
@@ -50,19 +50,19 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
     public override void Draw()
     {
-        if (ImGui.CollapsingHeader("Behavior")) {
+        if (ImGui.CollapsingHeader("行為")) {
             DrawBehavior();
         }
 
-        if (ImGui.CollapsingHeader("Interface")) {
+        if (ImGui.CollapsingHeader("介面")) {
             DrawInterface();
         }
 
-        if (ImGui.CollapsingHeader("Data")) {
+        if (ImGui.CollapsingHeader("資料")) {
             DrawData();
         }
 
-        if (ImGui.CollapsingHeader("Object Inspector Colors")) {
+        if (ImGui.CollapsingHeader("物件檢查器顏色")) {
             DrawColors();
         }
     }
@@ -75,13 +75,13 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
         ImGui.SetNextItemWidth(inputWidth);
         var logLevel = (LogLevel)configuration.MinimumLogLevel;
-        if (ImGuiComponents.ComboEnum("Log Level", ref logLevel)) {
+        if (ImGuiComponents.ComboEnum("記錄等級", ref logLevel)) {
             configuration.MinimumLogLevel = (int)logLevel;
             _configuration.Save(nameof(configuration.MinimumLogLevel));
         }
 
         var enableIpfd = configuration.EnableIpfd;
-        if (ImGui.Checkbox("Enable IPFD (In-Process Faux Debugger)", ref enableIpfd)) {
+        if (ImGui.Checkbox("啟用 IPFD（行程內偽偵錯器）", ref enableIpfd)) {
             configuration.EnableIpfd = enableIpfd;
             _configuration.Save(nameof(configuration.EnableIpfd));
         }
@@ -91,7 +91,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
         ImGui.SameLine();
         using (ImRaii.Disabled(!_ipfd.Loaded)) {
-            if (ImGui.Button("Force Unload##ipfd")) {
+            if (ImGui.Button("強制卸載##ipfd")) {
                 _ipfd.Unload();
             }
         }
@@ -99,7 +99,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
         var symbolHandlerMode = configuration.SymbolHandlerMode;
         if (Util.IsWine()) {
             var enableWineSymbolHandler = symbolHandlerMode == SymbolHandlerMode.ForceInitialize;
-            if (ImGui.Checkbox("Enable Symbol Handler", ref enableWineSymbolHandler)) {
+            if (ImGui.Checkbox("啟用符號處理器", ref enableWineSymbolHandler)) {
                 symbolHandlerMode = enableWineSymbolHandler
                     ? SymbolHandlerMode.ForceInitialize
                     : SymbolHandlerMode.Disable;
@@ -108,7 +108,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
             }
         } else {
             if (ImGuiComponents.ComboEnum(
-                    "Symbol Handler Mode", ref symbolHandlerMode, ConfigurationEnumExtensions.Label
+                    "符號處理器模式", ref symbolHandlerMode, ConfigurationEnumExtensions.Label
                 )) {
                 configuration.SymbolHandlerMode = symbolHandlerMode;
                 _configuration.Save(nameof(configuration.SymbolHandlerMode));
@@ -125,21 +125,21 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
         if (ImGui.IsItemHovered()) {
             using var _ = ImRaii.Tooltip();
-            ImGui.TextUnformatted("This setting may cause stability issues.");
+            ImGui.TextUnformatted("此設定可能導致穩定性問題。");
             ImGui.TextUnformatted(
-                $"Disabling it may then require hand-editing pluginConfigs{(Util.IsWine() ? '/' : '\\')}{_configuration.InternalName}.json."
+                $"停用後可能需要手動編輯 pluginConfigs{(Util.IsWine() ? '/' : '\\')}{_configuration.InternalName}.json。"
             );
         }
     }
 
     private void DrawInterface()
     {
-        ImGuiComponents.SeparatorText("Memory Snapshots");
+        ImGuiComponents.SeparatorText("記憶體快照");
         using (ImRaii.PushId("###Interface_MemorySnapshots")) {
             DrawInterface_MemorySnapshots();
         }
 
-        ImGuiComponents.SeparatorText("Miscellaneous");
+        ImGuiComponents.SeparatorText("其他");
         using (ImRaii.PushId("###Interface_Miscellaneous")) {
             DrawInterface_Miscellaneous();
         }
@@ -151,7 +151,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
         var snapshotsAnnotated = configuration.OpenSnapshotsAnnotated;
         if (ImGuiComponents.Combo(
-                "Default Display Mode", ref snapshotsAnnotated, [null, false, true,],
+                "預設顯示模式", ref snapshotsAnnotated, [null, false, true,],
                 DescribeSnapshotsAnnotated
             )) {
             configuration.OpenSnapshotsAnnotated = snapshotsAnnotated;
@@ -162,9 +162,9 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
     private static string DescribeSnapshotsAnnotated(bool? annotated)
         => annotated switch
         {
-            null  => "Inherit Last",
-            false => "Compact",
-            true  => "Annotated",
+            null  => "沿用上次",
+            false => "精簡",
+            true  => "含註解",
         };
 
     private void DrawInterface_Miscellaneous()
@@ -172,13 +172,13 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
         var configuration = _configuration.Configuration;
 
         var showInDevMenu = configuration.ShowInDevMenu;
-        if (ImGui.Checkbox("Show in dev menu", ref showInDevMenu)) {
+        if (ImGui.Checkbox("在開發選單中顯示", ref showInDevMenu)) {
             configuration.ShowInDevMenu = showInDevMenu;
             _configuration.Save(nameof(configuration.ShowInDevMenu));
         }
 
         var serious = configuration.Serious;
-        if (ImGui.Checkbox("I don't like fun.", ref serious)) {
+        if (ImGui.Checkbox("我不喜歡玩笑。", ref serious)) {
             configuration.Serious = serious;
             _configuration.Save(nameof(configuration.Serious));
         }
@@ -202,7 +202,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
         );
         if (configuration.AutomaticDataYaml) {
             using (ImRaii.Disabled()) {
-                var dummy = "Automatically download from GitHub";
+                var dummy = "自動從 GitHub 下載";
                 ImGui.InputText(
                     "###dataYamlPathDummy", ref dummy, (uint)dummy.Length + 1, ImGuiInputTextFlags.ReadOnly
                 );
@@ -215,7 +215,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
             }
 
             if (ImGui.IsItemHovered()) {
-                ImGui.TextUnformatted("Use a local copy of the file instead");
+                ImGui.TextUnformatted("改為使用本機檔案副本");
             }
         } else {
             _imGuiComponents.InputFile(
@@ -234,7 +234,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
             }
 
             if (ImGui.IsItemHovered()) {
-                ImGui.TextUnformatted("Automatically download the file from GitHub instead");
+                ImGui.TextUnformatted("改為自動從 GitHub 下載檔案");
             }
         }
 
@@ -244,13 +244,13 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
         }
 
         if (ImGui.IsItemHovered()) {
-            ImGui.TextUnformatted("Refresh the file");
+            ImGui.TextUnformatted("重新整理檔案");
         }
 
         ImGui.SameLine(0.0f, innerSpacing);
-        ImGui.TextUnformatted("ClientStructs' data.yml");
+        ImGui.TextUnformatted("ClientStructs 的 data.yml");
 
-        DrawDisableLogCategoryCheckbox(typeof(DataYamlContainer), "Silence data.yml-related logs");
+        DrawDisableLogCategoryCheckbox(typeof(DataYamlContainer), "靜音 data.yml 相關記錄");
     }
 
     private void DrawDisableLogCategoryCheckbox(Type type, string label)
