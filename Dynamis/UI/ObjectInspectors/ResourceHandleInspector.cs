@@ -34,7 +34,7 @@ public sealed unsafe class ResourceHandleInspector : IObjectInspector<ResourceHa
             ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
             using var id = ImRaii.PushId("FileNameCopy");
             if (ImGuiComponents.NormalizedIconButton(FontAwesomeIcon.Copy)) {
-                ImGui.SetClipboardText(pointer->FileName.AsSpan());
+                ImGui.SetClipboardText(pointer->FileName.ToString());
             }
         } else {
             ImGui.TextUnformatted($"File Name: {pointer->FileName}");

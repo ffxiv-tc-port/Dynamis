@@ -3,6 +3,7 @@ using Dalamud.Interface.Style;
 using Dalamud.Interface.Utility.Raii;
 using Dynamis.Interop;
 using Dynamis.UI.Windows;
+using Dynamis.Utility;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 

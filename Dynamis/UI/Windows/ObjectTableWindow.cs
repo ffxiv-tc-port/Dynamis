@@ -1,6 +1,6 @@
 using System.Numerics;
 using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
@@ -44,7 +44,7 @@ public sealed class ObjectTableWindow : Window, ISingletonWindow, IMessageObserv
 
     public override void Draw()
     {
-        ImGui.Checkbox("Show live table"u8, ref _vmLive);
+        ImGui.Checkbox("Show live table", ref _vmLive);
 
         if (_vmLive) {
             DrawTableLive();
@@ -56,15 +56,15 @@ public sealed class ObjectTableWindow : Window, ISingletonWindow, IMessageObserv
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Refresh"u8)) {
+        if (ImGui.Button("Refresh")) {
             _vmSnapshot = _framework.RunOnFrameworkThread(TakeSnapshot);
         }
 
         if (!_vmSnapshot.IsCompleted) {
-            ImGui.TextUnformatted("Taking snapshot of object table..."u8);
+            ImGui.TextUnformatted("Taking snapshot of object table...");
         } else if (_vmSnapshot.Exception is not null) {
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                ImGui.TextUnformatted("Failed taking snapshot of object table:"u8);
+                ImGui.TextUnformatted("Failed taking snapshot of object table:");
             }
 
             ImGui.TextUnformatted(_vmSnapshot.Exception.ToString());
@@ -75,7 +75,7 @@ public sealed class ObjectTableWindow : Window, ISingletonWindow, IMessageObserv
 
     private void DrawTableLive()
     {
-        using var table = ImRaii.Table("##objectTable"u8, 6, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit);
+        using var table = ImRaii.Table("##objectTable", 6, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit);
         if (!table) {
             return;
         }
@@ -88,7 +88,7 @@ public sealed class ObjectTableWindow : Window, ISingletonWindow, IMessageObserv
 
     private void DrawTableSnapshot(TableEntry[] objectTable)
     {
-        using var table = ImRaii.Table("##objectTable"u8, 6, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit);
+        using var table = ImRaii.Table("##objectTable", 6, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit);
         if (!table) {
             return;
         }
@@ -101,12 +101,12 @@ public sealed class ObjectTableWindow : Window, ISingletonWindow, IMessageObserv
 
     private static void SetupAndDrawTableHeader()
     {
-        ImGui.TableSetupColumn("Index"u8,               ImGuiTableColumnFlags.WidthStretch, 0.05f);
-        ImGui.TableSetupColumn("Game Object ID"u8,      ImGuiTableColumnFlags.WidthStretch, 0.15f);
-        ImGui.TableSetupColumn("Name"u8,                ImGuiTableColumnFlags.WidthStretch, 0.3f);
-        ImGui.TableSetupColumn("Game Object Address"u8, ImGuiTableColumnFlags.WidthStretch, 0.15f);
-        ImGui.TableSetupColumn("Draw Object Address"u8, ImGuiTableColumnFlags.WidthStretch, 0.15f);
-        ImGui.TableSetupColumn("Position"u8,            ImGuiTableColumnFlags.WidthStretch, 0.2f);
+        ImGui.TableSetupColumn("Index",               ImGuiTableColumnFlags.WidthStretch, 0.05f);
+        ImGui.TableSetupColumn("Game Object ID",      ImGuiTableColumnFlags.WidthStretch, 0.15f);
+        ImGui.TableSetupColumn("Name",                ImGuiTableColumnFlags.WidthStretch, 0.3f);
+        ImGui.TableSetupColumn("Game Object Address", ImGuiTableColumnFlags.WidthStretch, 0.15f);
+        ImGui.TableSetupColumn("Draw Object Address", ImGuiTableColumnFlags.WidthStretch, 0.15f);
+        ImGui.TableSetupColumn("Position",            ImGuiTableColumnFlags.WidthStretch, 0.2f);
         ImGui.TableHeadersRow();
     }
 

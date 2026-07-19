@@ -5,10 +5,9 @@ using System.Management.Automation;
 using System.Management.Automation.Host;
 using System.Reflection;
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dynamis.UI.Components;
-using Dynamis.Utility;
 using ImGuiNET;
 
 namespace Dynamis.UI.PsHost.Input;

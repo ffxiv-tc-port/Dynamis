@@ -29,7 +29,9 @@ public sealed class WindowManager(
         uiBuilder.Draw += Draw;
         uiBuilder.OpenMainUi += OpenMainUi;
         uiBuilder.OpenConfigUi += OpenConfigUi;
-        uiBuilder.DefaultStyleChanged += DefaultStyleChanged;
+        // TC note: TC's Dalamud has no IUiBuilder.DefaultStyleChanged event (a newer
+        // Dalamud addition) - DefaultStyleChanged() only forwarded to ImGuiComponents.Update(),
+        // which is itself a no-op on TC now (see ImGuiComponents.cs's Update() TC note).
 
         foreach (var window in windows) {
             windowSystem.AddWindow(window.Value);
@@ -44,7 +46,6 @@ public sealed class WindowManager(
             (window as IDisposable)?.Dispose();
         }
         windowSystem.RemoveAllWindows();
-        uiBuilder.DefaultStyleChanged -= DefaultStyleChanged;
         uiBuilder.OpenConfigUi -= OpenConfigUi;
         uiBuilder.OpenMainUi -= OpenMainUi;
         uiBuilder.Draw -= Draw;

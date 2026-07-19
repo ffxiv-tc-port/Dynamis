@@ -1,13 +1,12 @@
 using System.Numerics;
 using System.Reflection;
-using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin;
 using Dynamis.Configuration;
 using Dynamis.Messaging;
 using Dynamis.UI.Windows;
-using Dynamis.Utility;
+using ImGuiNET;
 
 namespace Dynamis.UI;
 
@@ -28,7 +27,7 @@ public sealed class DevMenuItem(
             return;
         }
 
-        using var menu = ImRaii.Menu("Dynamis"u8);
+        using var menu = ImRaii.Menu("Dynamis");
         if (!menu) {
             return;
         }
@@ -37,22 +36,22 @@ public sealed class DevMenuItem(
 
         ImGui.Separator();
 
-        if (ImGui.MenuItem("Toolbox"u8)) {
+        if (ImGui.MenuItem("Toolbox")) {
             messageHub.Publish<OpenWindowMessage<ToolboxWindow>>();
         }
 
-        if (ImGui.MenuItem("Settings"u8)) {
+        if (ImGui.MenuItem("Settings")) {
             messageHub.Publish<OpenWindowMessage<SettingsWindow>>();
         }
 
-        if (ImGui.MenuItem("Changelog"u8)) {
+        if (ImGui.MenuItem("Changelog")) {
             messageHub.Publish<OpenWindowMessage<ChangelogWindow>>();
         }
 
         if (configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion) {
             var drawList = ImGui.GetWindowDrawList();
             var style = ImGui.GetStyle();
-            var min = ImGui.GetItemRectMin() + ImGui.CalcTextSize("Changelog"u8) with
+            var min = ImGui.GetItemRectMin() + ImGui.CalcTextSize("Changelog") with
             {
                 Y = 0.0f,
             };
@@ -62,8 +61,8 @@ public sealed class DevMenuItem(
                 drawList.AddText(
                     min + new Vector2(
                         style.ItemSpacing.X * 0.5f + style.ItemInnerSpacing.X,
-                        (max.Y - min.Y - ImGui.CalcTextSize("(NEW!)"u8).Y) * 0.5f
-                    ), ImGuiColors.SuccessForeground.ToUInt32(), "(NEW!)"u8
+                        (max.Y - min.Y - ImGui.CalcTextSize("(NEW!)").Y) * 0.5f
+                    ), ImGuiColors.SuccessForeground.ToUInt32(), "(NEW!)"
                 );
             } finally {
                 drawList.PopClipRect();
@@ -78,7 +77,7 @@ public sealed class DevMenuItem(
     {
     }
 
-    bool Toolbox.IView.Item(ReadOnlySpan<byte> label)
+    bool Toolbox.IView.Item(string label)
         => ImGui.MenuItem(label);
 
     void Toolbox.IView.Separator()

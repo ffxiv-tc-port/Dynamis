@@ -1,5 +1,5 @@
 using System.Numerics;
-using Dalamud.Bindings.ImGui;
+using ImGuiNET;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dynamis.Interop;
@@ -45,7 +45,7 @@ public sealed class PointerInput(PointerParser pointerParser, ImGuiComponents im
     {
         bool changed;
         using (ImRaii.PushFont(UiBuilder.MonoFont)) {
-            changed = ImGui.InputText(label, _buffer, flags | ImGuiInputTextFlags.AutoSelectAll);
+            changed = ImGui.InputText(label, _buffer, (uint)_buffer.Length, flags | ImGuiInputTextFlags.AutoSelectAll);
         }
 
         if (changed) {
@@ -62,7 +62,9 @@ public sealed class PointerInput(PointerParser pointerParser, ImGuiComponents im
         if (!ImGui.IsItemActive() && SubText is not null) {
             Vector2 mainTextSize;
             using (ImRaii.PushFont(UiBuilder.MonoFont)) {
-                mainTextSize = ImGui.CalcTextSize(_buffer.AsSpan().BeforeNull());
+                mainTextSize = ImGui.CalcTextSize(
+                    System.Text.Encoding.UTF8.GetString(((ReadOnlySpan<byte>)_buffer).BeforeNull())
+                );
             }
 
             ImGuiComponents.AddInputSubText(mainTextSize.X, SubText);

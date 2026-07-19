@@ -1,5 +1,5 @@
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dynamis.Configuration;
@@ -8,7 +8,6 @@ using Dynamis.Interop.Ipfd;
 using Dynamis.Interop.Win32;
 using Dynamis.Messaging;
 using Dynamis.UI.Components;
-using Dynamis.Utility;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 

@@ -33,8 +33,7 @@ public sealed class ChoicePrompt(
                 ImGui.SameLine();
             }
 
-            using (var color = new ImRaii.ColorDisposable()) {
-                color.Push(ImGuiCol.Button,        ImGui.GetColorU32(ImGuiCol.Button).Emphasis());
+            using (var color = ImRaii.PushColor(ImGuiCol.Button, ImGui.GetColorU32(ImGuiCol.Button).Emphasis())) {
                 color.Push(ImGuiCol.ButtonHovered, ImGui.GetColorU32(ImGuiCol.ButtonHovered).Emphasis());
                 color.Push(ImGuiCol.ButtonActive,  ImGui.GetColorU32(ImGuiCol.ButtonActive).Emphasis());
                 if (ImGui.Button($"{choice.Label.ParseAccelerator().Label}###{i}")) {
