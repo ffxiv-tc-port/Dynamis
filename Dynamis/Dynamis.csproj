@@ -125,6 +125,10 @@
     <ItemGroup>
         <EmbeddedResource Include="Resources\*.png" />
         <None Include="*.png" />
+        <!-- zh-TW externalized loc store; ships in BOTH the Dynamis and DynamisWithSMA
+             outputs since both configurations build from this project (release.yml zips
+             each bin dir wholesale). -->
+        <None Include="LanguageChineseTraditional.ini" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <!-- TC note: this machine has no Rust toolchain installed, so the ipfd native crate
