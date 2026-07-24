@@ -37,7 +37,23 @@ public sealed class Ipfd : IMessageObserver<ConfigurationChangedMessage>, IDispo
         _logger = logger;
         _configuration = configuration;
         _messageHub = messageHub;
-        _dtrEntry = dtrBar.Get("Dynamis IPFD", BuildSeString($"{UiGlow("IPFD", Gold)} Loaded"));
+        // TC note: Dynamis and DynamisWithSMA are two separately-loadable plugins built from
+        // this same source (see the WITH_SMA conditional compilation throughout this repo) -
+        // if both are loaded at once (a supported, expected combination - they're documented
+        // as two independent "distributions" of the plugin) they used to both register a DTR
+        // bar entry titled exactly "Dynamis IPFD". IDtrBar.Get() throws ArgumentException on a
+        // duplicate title, which silently faulted whichever variant's generic host started
+        // second (never surfaced until Dispose() finally observed the already-faulted
+        // RunAsync() task at plugin unload) - the whole host, not just the DTR icon, since
+        // Ipfd is constructed as part of normal host startup. Suffix the title so the two
+        // variants can't collide.
+        _dtrEntry = dtrBar.Get(
+#if WITH_SMA
+            "Dynamis IPFD (SMA)",
+#else
+            "Dynamis IPFD",
+#endif
+            BuildSeString($"{UiGlow("IPFD", Gold)} Loaded"));
         _dtrEntry.Tooltip =
             BuildSeString($"{UiGlow("Dynamis IPFD", Gold)} is currently loaded.\nClick to open settings.");
         _dtrEntry.OnClick += messageHub.Publish<OpenWindowMessage<SettingsWindow>>;
