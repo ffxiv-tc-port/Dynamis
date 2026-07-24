@@ -133,6 +133,13 @@ public sealed class Plugin : IDalamudPlugin
     {
         _pluginCts.Cancel();
         _pluginCts.Dispose();
-        _hostBuilderRunTask.Wait();
+
+        // The generic host already applies its own default ~5s shutdown timeout to well-behaved
+        // IHostedService implementations, but that's only cooperative - a hosted service (e.g.
+        // the PowerShell host under WITH_SMA) that ignores its cancellation token could still
+        // hang here indefinitely. Back it with a hard bound so plugin unload can't freeze the
+        // game outright.
+        if (!_hostBuilderRunTask.Wait(TimeSpan.FromSeconds(10)))
+            Log?.Warning("Timed out waiting for Dynamis host to shut down; continuing unload anyway");
     }
 }
