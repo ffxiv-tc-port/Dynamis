@@ -27,7 +27,12 @@ public sealed class BootHelper(IDalamudPluginInterface pi)
         );
         var result = (IAsyncResult)tPool.GetMethod("BeginGetRunspace", BindingFlags.Instance | BindingFlags.NonPublic)
             !.Invoke(runspacePool, [null, null,])!;
-        result.AsyncWaitHandle.WaitOne();
+        // This runs inside a RunOnFrameworkThread callback (see InvokeOnFrameworkCommand), i.e.
+        // on the game's main thread, so an indefinite wait here would freeze the game if the
+        // runspace pool is ever exhausted. Bound it instead of trusting the pool to always have
+        // a runspace immediately available.
+        if (!result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5)))
+            throw new PSInvalidOperationException("Timed out waiting for a PowerShell runspace");
         var runspace = (Runspace)tPool.GetMethod("EndGetRunspace", BindingFlags.Instance | BindingFlags.NonPublic)
             !.Invoke(runspacePool, [result,])!;
         var previous = Runspace.DefaultRunspace;
