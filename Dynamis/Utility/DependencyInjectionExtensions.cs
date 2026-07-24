@@ -73,39 +73,19 @@ internal static class DependencyInjectionExtensions
         }
     }
 
-    // TC note: TC's Dalamud has no `Dalamud.IoC.IDalamudService` marker interface (a newer
-    // Dalamud convenience that lets every plugin-service interface be discovered generically
-    // via reflection over Dalamud.dll's exported types) and no
+    // TC note: TC's Dalamud has no `Dalamud.IoC.IDalamudService` marker interface and no
     // `IDalamudPluginInterface.GetRequiredService<T>()` either - both are newer-Dalamud-only
-    // (see the shared skill notes' "recurring old-API-generation compile fixes" list). The
-    // old-API equivalent is `pluginInterface.Create<T>()`, which populates a fresh instance's
-    // `[PluginService]`-attributed properties - but there's no generic "give me every
-    // registered Dalamud service interface" enumeration without that marker interface, so
-    // this lists the specific Dalamud service interfaces this repo actually consumes
-    // (found via `grep` across the whole tree for constructor-injected `I*` types) instead of
-    // scanning for all of them.
-    private static readonly Type[] KnownDalamudServiceTypes =
-    [
-        typeof(IChatGui), typeof(ICommandManager), typeof(IDataManager), typeof(IDtrBar),
-        typeof(IFramework), typeof(IGameInteropProvider), typeof(INotificationManager),
-        typeof(IObjectTable), typeof(IPluginLog), typeof(ISigScanner), typeof(ITextureProvider),
-        typeof(ITextureReadbackProvider),
-    ];
-
-    public static void AddDalamudServices(this IServiceCollection collection)
-    {
-        var createMethod = typeof(IDalamudPluginInterface).GetMethod(nameof(IDalamudPluginInterface.Create))!;
-        foreach (var type in KnownDalamudServiceTypes) {
-            if (collection.All(t => t.ServiceType != type)) {
-                var genericCreate = createMethod.MakeGenericMethod(type);
-                collection.AddSingleton(
-                    type, provider => genericCreate.Invoke(
-                        provider.GetRequiredService<IDalamudPluginInterface>(), [Array.Empty<object>(),]
-                    )!
-                );
-            }
-        }
-    }
+    // (see the shared skill notes' "recurring old-API-generation compile fixes" list). A
+    // prior TC port attempt tried working around this with
+    // `IDalamudPluginInterface.Create<T>()`, reasoning it as the old-API equivalent - but
+    // `Create<T>()` only populates a fresh *plugin-defined class's* `[PluginService]`
+    // properties, it can't construct one of Dalamud's own service interfaces directly, and
+    // silently faulted the whole DI host at startup. The actual old-API-generation way to get
+    // these is what `Plugin`'s constructor now does: take each one as a normal constructor
+    // parameter (same mechanism every `[PluginService]`-attributed plugin here relies on) and
+    // `collection.AddSingleton(...)` the already-resolved instance - see upstream's own
+    // pre-"Simplify Dalamud service instantiation" (de9c735) `Plugin.cs` for the original of
+    // this exact pattern.
 
     private static Func<IServiceProvider, T> MakeServiceFactory<T>(Type t) where T : notnull
         => (Func<IServiceProvider, T>)typeof(DependencyInjectionExtensions).GetMethod(nameof(ServiceFactory), BindingFlags.NonPublic | BindingFlags.Static)!
