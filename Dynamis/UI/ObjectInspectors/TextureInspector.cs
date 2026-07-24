@@ -44,9 +44,9 @@ public sealed unsafe class TextureInspector(
             return;
         }
 
-        using var srv = new ShaderResourceView((nint)pointer->D3D11ShaderResourceView);
-        var description = srv.Description;
-        ImGui.TextUnformatted($"Format: {description.Format} Dimension: {description.Dimension}");
+        D3D11_SHADER_RESOURCE_VIEW_DESC description;
+        ((ID3D11ShaderResourceView*)pointer->D3D11ShaderResourceView)->GetDesc(&description);
+        ImGui.TextUnformatted($"Format: {description.Format} Dimension: {description.ViewDimension}");
     }
 
     public void DrawAdditionalTooltipDetails(Texture* pointer)

@@ -90,7 +90,7 @@ public sealed partial class ImGuiComponents(
     private const           float   SeparatorThickness = 1.0f;
     private static readonly Vector2 SeparatorTextAlign = new(0.02f, 0.5f);
 
-    public static void SeparatorText(ReadOnlySpan<byte> text, float extraW = 0.0f)
+    public static void SeparatorText(ImU8String text, float extraW = 0.0f)
     {
         var style = ImGui.GetStyle();
         var drawList = ImGui.GetWindowDrawList();

@@ -6,7 +6,7 @@ using Dalamud.Plugin;
 using Dynamis.Configuration;
 using Dynamis.Messaging;
 using Dynamis.UI.Windows;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace Dynamis.UI;
 

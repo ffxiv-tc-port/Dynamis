@@ -7,7 +7,6 @@ using Dalamud.Interface.Windowing;
 using Dynamis.Interop;
 using Dynamis.UI.Components;
 using Dynamis.UI.ObjectInspectors;
-using Dynamis.Utility;
 using Microsoft.Extensions.Logging;
 
 namespace Dynamis.UI.Windows;

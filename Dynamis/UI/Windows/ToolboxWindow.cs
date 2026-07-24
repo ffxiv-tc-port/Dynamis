@@ -7,7 +7,6 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dynamis.Configuration;
 using Dynamis.Messaging;
-using Dynamis.Utility;
 
 namespace Dynamis.UI.Windows;
 
