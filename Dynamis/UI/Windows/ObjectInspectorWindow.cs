@@ -1,4 +1,5 @@
 using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
@@ -6,7 +7,7 @@ using Dalamud.Interface.Windowing;
 using Dynamis.Interop;
 using Dynamis.UI.Components;
 using Dynamis.UI.ObjectInspectors;
-using ImGuiNET;
+using Dynamis.Utility;
 using Microsoft.Extensions.Logging;
 
 namespace Dynamis.UI.Windows;

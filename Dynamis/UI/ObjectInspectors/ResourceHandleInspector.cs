@@ -1,12 +1,12 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using Dynamis.Interop;
 using Dynamis.UI.Windows;
 using FFXIVClientStructs.FFXIV.Client.System.Resource.Handle;
-using ImGuiNET;
 
 namespace Dynamis.UI.ObjectInspectors;
 
