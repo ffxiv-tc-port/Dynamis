@@ -10,6 +10,6 @@
     "developer-tools"
   ],
   "AssemblyVersion": "9.0.0.1",
-  "IconUrl": "https://raw.githubusercontent.com/Lother/DalamudPluginsTC/main/icons/Dynamis.png",
-  "RepoUrl": "https://github.com/Lother/Dynamis"
+  "IconUrl": "https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/icons/Dynamis.png",
+  "RepoUrl": "https://github.com/ffxiv-tc-port/Dynamis"
 }
