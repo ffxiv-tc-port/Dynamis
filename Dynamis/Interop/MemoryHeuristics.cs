@@ -8,10 +8,10 @@ public sealed class MemoryHeuristics
 {
     private readonly Ipfd.Ipfd _ipfd;
 
-    [Signature("E8 ?? ?? ?? ?? 48 89 5D A0 48 8B 4D B0")]
+    [Signature("E8 ?? ?? ?? ?? 48 C7 43 20 00 00 00 00 48 8B 3B 48")]
     private nint _freeMemory = 0;
 
-    [Signature("E8 ?? ?? ?? ?? 48 8B C3 48 83 C4 ?? 5F 5D")]
+    [Signature("E8 ?? ?? ?? ?? 33 DB 39 58 18 74 09 39")]
     private nint _freeMemory2 = 0;
 
     public MemoryHeuristics(Ipfd.Ipfd ipfd, IGameInteropProvider gameInteropProvider)
