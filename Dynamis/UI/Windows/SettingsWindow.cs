@@ -139,6 +139,11 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
             DrawInterface_MemorySnapshots();
         }
 
+        ImGuiComponents.SeparatorText("Visibility".Loc());
+        using (ImRaii.PushId("###Interface_Visibility")) {
+            DrawInterface_Visibility();
+        }
+
         ImGuiComponents.SeparatorText("Miscellaneous".Loc());
         using (ImRaii.PushId("###Interface_Miscellaneous")) {
             DrawInterface_Miscellaneous();
@@ -166,6 +171,38 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
             false => "Compact".Loc(),
             true  => "Annotated".Loc(),
         };
+
+    private void DrawInterface_Visibility()
+    {
+        var configuration = _configuration.Configuration;
+
+        // 上游這幾條原本寫成 "..."u8。改回一般字串 + .Loc()，否則繁中譯文進不去
+        // （u8 是 ReadOnlySpan<byte>，接不上以 string 為鍵的 loc 機制）。
+        // 本檔其餘 u8 用法（例如 ###dataYamlPathDummy）是 ImGui id，不需翻譯，保持原樣。
+        var automaticUiHide = !configuration.DisableAutomaticUiHide;
+        if (ImGui.Checkbox("Hide when the game's UI is hidden".Loc(), ref automaticUiHide)) {
+            configuration.DisableAutomaticUiHide = !automaticUiHide;
+            _configuration.Save(nameof(configuration.DisableAutomaticUiHide));
+        }
+
+        var cutsceneUiHide = !configuration.DisableCutsceneUiHide;
+        if (ImGui.Checkbox("Hide during cutscenes".Loc(), ref cutsceneUiHide)) {
+            configuration.DisableCutsceneUiHide = !cutsceneUiHide;
+            _configuration.Save(nameof(configuration.DisableCutsceneUiHide));
+        }
+
+        var gposeUiHide = !configuration.DisableGposeUiHide;
+        if (ImGui.Checkbox("Hide during group pose".Loc(), ref gposeUiHide)) {
+            configuration.DisableGposeUiHide = !gposeUiHide;
+            _configuration.Save(nameof(configuration.DisableGposeUiHide));
+        }
+
+        var userUiHide = !configuration.DisableUserUiHide;
+        if (ImGui.Checkbox("Hide when toggling the UI".Loc(), ref userUiHide)) {
+            configuration.DisableUserUiHide = !userUiHide;
+            _configuration.Save(nameof(configuration.DisableUserUiHide));
+        }
+    }
 
     private void DrawInterface_Miscellaneous()
     {

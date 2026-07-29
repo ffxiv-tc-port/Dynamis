@@ -11,7 +11,7 @@ namespace Dynamis.UI.Windows;
 
 public sealed partial class ChangelogWindow : Window, ISingletonWindow, IMessageObserver<CommandMessage>
 {
-    public const int ChangelogVersion = 1;
+    public const int ChangelogVersion = 3;
 
     private readonly ConfigurationContainer _configuration;
 
@@ -47,6 +47,8 @@ public sealed partial class ChangelogWindow : Window, ISingletonWindow, IMessage
         DrawMarkAsUnread();
         using var child = ImRaii.Child("###entries");
         using var twp = new ImRaiiTextWrapPos();
+        Draw0_1_4_2();
+        Draw0_1_4_1();
         Draw0_1_4_0();
         Draw0_1_3_14();
         Draw0_1_3_13();
@@ -116,7 +118,7 @@ public sealed partial class ChangelogWindow : Window, ISingletonWindow, IMessage
 
     public void HandleMessage(CommandMessage message)
     {
-        if (!message.IsSubCommand(null, "changelog", "cl", "changes", "chg")) {
+        if (!message.IsSubCommand("changelog", "cl", "changes", "chg")) {
             return;
         }
 
