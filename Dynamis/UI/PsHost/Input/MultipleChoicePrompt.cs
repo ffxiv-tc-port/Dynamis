@@ -51,7 +51,7 @@ public sealed class MultipleChoicePrompt(
             }
         }
 
-        return ImGui.Button("Submit");
+        return ImGui.Button("Submit".Loc());
     }
 
     public override void Cancel()

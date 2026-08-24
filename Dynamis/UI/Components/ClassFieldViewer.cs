@@ -18,7 +18,7 @@ public sealed class ClassFieldViewer
 
     public void DrawHeader()
     {
-        ImGui.Checkbox("Show Integers as Hex", ref _vmHexIntegers);
+        ImGui.Checkbox("Show Integers as Hex".Loc(), ref _vmHexIntegers);
     }
 
     public void Draw(nint baseAddress, bool writable)

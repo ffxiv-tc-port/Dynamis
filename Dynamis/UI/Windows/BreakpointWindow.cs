@@ -38,7 +38,7 @@ public sealed class BreakpointWindow : IndexedWindow
 
     public BreakpointWindow(WindowSystem windowSystem, ImGuiComponents imGuiComponents,
         PointerInputFactory pointerInputFactory, ObjectInspector objectInspector, MessageHub messageHub,
-        Breakpoint breakpoint, int index) : base($"Dynamis - IPFD Breakpoint##{index}", windowSystem, index)
+        Breakpoint breakpoint, int index) : base($"{"Dynamis - IPFD Breakpoint".Loc()}##{index}", windowSystem, index)
     {
         _imGuiComponents = imGuiComponents;
         _objectInspector = objectInspector;
@@ -82,7 +82,7 @@ public sealed class BreakpointWindow : IndexedWindow
 
     private void DrawBreakpointEditor()
     {
-        ImGui.Checkbox("Enable Breakpoint", ref _vmEnable);
+        ImGui.Checkbox("Enable Breakpoint".Loc(), ref _vmEnable);
         ImGui.SameLine();
         ImGui.SetNextItemWidth(ImGui.CalcTextSize("mmmmm").X + ImGui.GetStyle().FramePadding.X * 2.0f + ImGui.GetStyle().ItemInnerSpacing.X * 2.0f + ImGui.GetFrameHeight() * 2.0f);
         lock (this) {
@@ -123,7 +123,7 @@ public sealed class BreakpointWindow : IndexedWindow
 
         ImGui.SameLine();
         using (ImRaii.Disabled(!(_vmSyncTask?.IsCompleted ?? true))) {
-            if (ImGui.Button("Apply Configuration")) {
+            if (ImGui.Button("Apply Configuration".Loc())) {
                 _vmSyncTask = _breakpoint.ModifyAsync(
                     _addressInput.GetValue(),
                     (_vmEnable ? BreakpointFlags.LocalEnable | BreakpointFlags.GlobalEnable : 0) | _vmLength
@@ -134,27 +134,27 @@ public sealed class BreakpointWindow : IndexedWindow
 
         if (_vmCondition == BreakpointFlags.DataReadsAndWrites) {
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                ImGui.TextUnformatted("Read/Write watchpoints in IPFD are known to cause crashes in some circumstances. Use at your own risk!");
+                ImGui.TextUnformatted("Read/Write watchpoints in IPFD are known to cause crashes in some circumstances. Use at your own risk!".Loc());
             }
         }
     }
 
     private static void DrawBreakpointStatus(nint address, BreakpointFlags flags)
     {
-        ImGui.TextUnformatted("Current breakpoint status: ");
+        ImGui.TextUnformatted("Current breakpoint status: ".Loc());
         ImGui.SameLine(0.0f, 0.0f);
         if (flags.HasFlag(BreakpointFlags.LocalEnable)) {
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.SuccessForeground)) {
-                ImGui.TextUnformatted("Enabled");
+                ImGui.TextUnformatted("Enabled".Loc());
             }
         } else {
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                ImGui.TextUnformatted("Disabled");
+                ImGui.TextUnformatted("Disabled".Loc());
             }
         }
 
         ImGui.SameLine();
-        ImGui.TextUnformatted("Address: ");
+        ImGui.TextUnformatted("Address: ".Loc());
         ImGui.SameLine(0.0f, 0.0f);
         using (ImRaii.PushFont(UiBuilder.MonoFont)) {
             ImGui.TextUnformatted($"0x{address:X}");
@@ -204,7 +204,7 @@ public sealed class BreakpointWindow : IndexedWindow
                 );
 
                 ImGui.TableNextColumn();
-                if (ImGui.Button("Inspect")) {
+                if (ImGui.Button("Inspect".Loc())) {
                     _messageHub.Publish(new InspectObjectMessage(record.Context));
                 }
             }

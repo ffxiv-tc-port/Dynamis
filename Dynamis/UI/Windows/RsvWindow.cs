@@ -16,7 +16,7 @@ public sealed class RsvWindow : Window, ISingletonWindow, IMessageObserver<Comma
     private readonly FileDialogManager _fileDialogManager;
 
     public RsvWindow(ImGuiComponents imGuiComponents, FileDialogManager fileDialogManager) : base(
-        "Dynamis - RSV Viewer", 0
+        "Dynamis - RSV Viewer".Loc(), 0
     )
     {
         _fileDialogManager = fileDialogManager;
@@ -37,7 +37,7 @@ public sealed class RsvWindow : Window, ISingletonWindow, IMessageObserver<Comma
             return;
         }
 
-        if (ImGui.Button("Export")) {
+        if (ImGui.Button("Export".Loc())) {
             _fileDialogManager.SaveFileDialog(
                 "Export RSV Map", ".json", "rsv.json", ".json", (ok, path) =>
                 {

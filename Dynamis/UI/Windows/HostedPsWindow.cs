@@ -49,7 +49,7 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
 
     public HostedPsWindow(ILogger logger, WindowSystem windowSystem, BootHelper bootHelper,
         IDalamudPluginInterface pi, IServiceProvider serviceProvider, ImGuiComponents imGuiComponents,
-        int index) : base($"Dynamis - Hosted PowerShell##{index}", windowSystem, index, 0)
+        int index) : base($"{"Dynamis - Hosted PowerShell".Loc()}##{index}", windowSystem, index, 0)
     {
         _logger = logger;
         _bootHelper = bootHelper;
@@ -384,17 +384,17 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
         }
 
         ImGui.SameLine();
-        ImGui.Checkbox("Copy mode", ref _copyOnClick);
+        ImGui.Checkbox("Copy mode".Loc(), ref _copyOnClick);
         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
         ImGuiComponents.NormalizedIcon(FontAwesomeIcon.InfoCircle, ImGuiColors.InfoForeground.ToUInt32());
 
         if (ImGui.IsItemHovered()) {
             using var _ = ImRaii.Tooltip();
-            ImGui.TextUnformatted("Click an output line to copy it (as plain text) to your clipboard.");
+            ImGui.TextUnformatted("Click an output line to copy it (as plain text) to your clipboard.".Loc());
         }
 
         ImGui.SameLine();
-        ImGui.Checkbox("Automatically scroll to latest output", ref _autoScroll);
+        ImGui.Checkbox("Automatically scroll to latest output".Loc(), ref _autoScroll);
     }
 
     private void DrawOutput(Vector2 size)

@@ -66,7 +66,7 @@ public sealed unsafe class ResourceHandleInspector : IObjectInspector<ResourceHa
             return;
         }
 
-        ImGui.TextUnformatted("Resource Contents:");
+        ImGui.TextUnformatted("Resource Contents:".Loc());
         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
         var fileName = pointer->FileName.ToString();
         _imGuiComponents.DrawPointer(
@@ -77,7 +77,7 @@ public sealed unsafe class ResourceHandleInspector : IObjectInspector<ResourceHa
             ), () => $"Contents of {fileName}"
         );
 
-        if (ImGui.Button("Save to File")) {
+        if (ImGui.Button("Save to File".Loc())) {
             var extension = $".{DecodeFileType(pointer->FileType)}";
             _fileDialogManager.SaveFileDialog(
                 $"Save {pointer->FileName}", extension, Path.GetFileName(pointer->FileName.ToString()), extension, (success, newPath) =>

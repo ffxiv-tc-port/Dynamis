@@ -51,7 +51,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
         PointerInputFactory pointerInputFactory, ObjectInspector objectInspector, ClassRegistry classRegistry,
         ShortLivedSingleCache<KeyValuePair<nint, AddressIdentification>[]> wellKnownAddresses,
         SnapshotViewerFactory snapshotViewerFactory, Lazy<ObjectInspectorDispatcher> objectInspectorDispatcher,
-        int index) : base($"Dynamis - Object Inspector##{index}", windowSystem, index, 0)
+        int index) : base($"{"Dynamis - Object Inspector".Loc()}##{index}", windowSystem, index, 0)
     {
         _logger = logger;
         _objectInspector = objectInspector;
@@ -178,14 +178,14 @@ public sealed class ObjectInspectorWindow : IndexedWindow
 
             if (ImGui.IsItemHovered()) {
                 using var _ = ImRaii.Tooltip();
-                ImGui.TextUnformatted("Refresh the Object");
+                ImGui.TextUnformatted("Refresh the Object".Loc());
             }
             ImGui.SameLine(0.0f, itemInnerSpacing);
         } else {
             ImGui.SameLine(0.0f, itemInnerSpacing * 2.0f + refreshButtonWidth);
         }
 
-        ImGui.TextUnformatted("Object Address");
+        ImGui.TextUnformatted("Object Address".Loc());
 
         switch (_vmStatus) {
             case 1:
@@ -193,7 +193,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
                 break;
             case 2:
                 using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                    ImGui.TextUnformatted("Error");
+                    ImGui.TextUnformatted("Error".Loc());
                 }
 
                 break;
@@ -204,7 +204,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
     {
         if (_vmSnapshot is null) {
             using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground);
-            ImGui.TextUnformatted("Error");
+            ImGui.TextUnformatted("Error".Loc());
             return;
         }
 
@@ -212,7 +212,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
 
         var liveSnapshot = _vmSnapshot.Live & _vmSnapshot.Address.HasValue;
         if (liveSnapshot) {
-            ImGui.Checkbox("Link to Live Object (where applicable)", ref _vmLive);
+            ImGui.Checkbox("Link to Live Object (where applicable)".Loc(), ref _vmLive);
         }
 
         var inspectors = (_vmSnapshot.Class is not null
@@ -228,7 +228,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
             return;
         }
 
-        using (var tab = ImRaii.TabItem("Memory Snapshot")) {
+        using (var tab = ImRaii.TabItem("Memory Snapshot".Loc())) {
             if (tab) {
                 _snapshotViewer.DrawHeader();
                 using var _ = ImRaii.Child("###memorySnapshot", -Vector2.One);
@@ -237,7 +237,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
         }
 
         if (_vmSnapshot.Class?.Fields.Length > 0) {
-            using var tab = ImRaii.TabItem("Class Fields");
+            using var tab = ImRaii.TabItem("Class Fields".Loc());
             if (tab) {
                 _classFieldViewer.DrawHeader();
 
@@ -274,7 +274,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
 
         if (@class is null) {
             ImGui.AlignTextToFramePadding();
-            ImGui.TextUnformatted("Unknown Class");
+            ImGui.TextUnformatted("Unknown Class".Loc());
             ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
             DrawClassChangeButton();
 
@@ -299,7 +299,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
         }
 
         if (ImGui.IsItemHovered()) {
-            ImGui.TextUnformatted("Copy to clipboard");
+            ImGui.TextUnformatted("Copy to clipboard".Loc());
         }
 
         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
@@ -318,7 +318,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
                 }
 
                 if (ImGui.IsItemHovered()) {
-                    ImGui.TextUnformatted("Copy to clipboard");
+                    ImGui.TextUnformatted("Copy to clipboard".Loc());
                 }
 
                 indent.Push(2);
@@ -344,34 +344,34 @@ public sealed class ObjectInspectorWindow : IndexedWindow
         if (sizeIsFromCtx) {
             ImGui.SameLine();
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.InfoForeground)) {
-                ImGui.TextUnformatted("(from context)");
+                ImGui.TextUnformatted("(from context)".Loc());
             }
         } else if (sizeIsFromDtor && sizeIsFromManaged) {
             ImGui.SameLine();
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.SuccessForeground)) {
-                ImGui.TextUnformatted("(from both managed type and dtor)");
+                ImGui.TextUnformatted("(from both managed type and dtor)".Loc());
             }
         } else if (!sizeIsFromDtor && !sizeIsFromManaged) {
             ImGui.SameLine();
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                ImGui.TextUnformatted("(no valid source - using rest of page)");
+                ImGui.TextUnformatted("(no valid source - using rest of page)".Loc());
             }
         } else {
             if (sizeIsFromDtor) {
                 ImGui.SameLine();
-                ImGui.TextUnformatted("(from dtor)");
+                ImGui.TextUnformatted("(from dtor)".Loc());
             }
 
             if (sizeIsFromManaged) {
                 ImGui.SameLine();
-                ImGui.TextUnformatted("(from managed type)");
+                ImGui.TextUnformatted("(from managed type)".Loc());
             }
         }
 
         if (@class.Truncated) {
             ImGui.SameLine();
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                ImGui.TextUnformatted("This object is actually larger, but is currently truncated.");
+                ImGui.TextUnformatted("This object is actually larger, but is currently truncated.".Loc());
             }
         }
 
@@ -402,7 +402,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
         }
 
         if (ImGui.IsItemHovered()) {
-            ImGui.TextUnformatted("Re-analyze as another class");
+            ImGui.TextUnformatted("Re-analyze as another class".Loc());
         }
 
         using var popup = ImRaii.Popup("###ClassChange");
@@ -412,7 +412,7 @@ public sealed class ObjectInspectorWindow : IndexedWindow
 
         var confirm = false;
         var hasInitialClass = _vmInitialClass is not null || _vmInitialClassIdHint is not null;
-        ImGui.TextUnformatted("Re-analyze as...");
+        ImGui.TextUnformatted("Re-analyze as...".Loc());
         ImGui.RadioButton(
             "Automatically determined class###autoClass", ref _vmReanalyze, _vmReanalyze is 1 && !hasInitialClass ? 1 : 0
         );
@@ -440,13 +440,13 @@ public sealed class ObjectInspectorWindow : IndexedWindow
 
         ImGui.Dummy(
             new(
-                ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("Re-analyze").X
+                ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("Re-analyze".Loc()).X
                                                 - ImGui.GetStyle().FramePadding.X * 2.0f, ImGui.GetFrameHeight()
             )
         );
         ImGui.SameLine(0.0f, 0.0f);
         using (ImRaii.Disabled(!canConfirm)) {
-            confirm |= ImGui.Button("Re-analyze");
+            confirm |= ImGui.Button("Re-analyze".Loc());
         }
 
         if (!confirm) {

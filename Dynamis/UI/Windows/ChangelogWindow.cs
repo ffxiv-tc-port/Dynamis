@@ -18,7 +18,7 @@ public sealed partial class ChangelogWindow : Window, ISingletonWindow, IMessage
     private int _readVersion;
 
     public ChangelogWindow(ConfigurationContainer configuration, ImGuiComponents imGuiComponents) : base(
-        $"Dynamis {Assembly.GetExecutingAssembly().GetName().Version} Changelog###DynamisChangelog",
+        "Dynamis ?? Changelog".Loc(Assembly.GetExecutingAssembly().GetName().Version) + "###DynamisChangelog",
         ImGuiWindowFlags.NoDocking
     )
     {

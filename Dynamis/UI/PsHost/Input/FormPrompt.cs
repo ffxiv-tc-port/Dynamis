@@ -37,7 +37,7 @@ public sealed class FormPrompt(
             }
 
             using (ImRaii.Disabled()) {
-                ImGui.Button("Submit");
+                ImGui.Button("Submit".Loc());
             }
 
             return true;
@@ -58,7 +58,7 @@ public sealed class FormPrompt(
             DrawHelpMessage(item.HelpMessage);
         }
 
-        enter |= ImGui.Button("Submit");
+        enter |= ImGui.Button("Submit".Loc());
 
         if (enter) {
             _finishedValue ??= GetValue();

@@ -22,7 +22,7 @@ public sealed class ToolboxWindow : Window, ISingletonWindow, IMessageObserver<C
     public ToolboxWindow(IUiBuilder uiBuilder, MessageHub messageHub, Toolbox toolbox,
         ConfigurationContainer configuration, ImGuiComponents imGuiComponents)
         : base(
-            $"Dynamis {Assembly.GetExecutingAssembly().GetName().Version} Toolbox###DynamisToolbox",
+            "Dynamis ?? Toolbox".Loc(Assembly.GetExecutingAssembly().GetName().Version) + "###DynamisToolbox",
             ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking
         )
     {
@@ -42,7 +42,7 @@ public sealed class ToolboxWindow : Window, ISingletonWindow, IMessageObserver<C
         _toolbox.Draw(this);
 
         ImGui.Dummy(new(16.0f, ImGui.GetContentRegionAvail().Y - ImGui.GetFrameHeightWithSpacing()));
-        if (ImGui.Button("Dalamud Console / Log window", new(ImGui.GetContentRegionAvail().X, -1.0f))) {
+        if (ImGui.Button("Dalamud Console / Log window".Loc(), new(ImGui.GetContentRegionAvail().X, -1.0f))) {
             _messageHub.Publish<OpenDalamudConsoleMessage>();
         }
 

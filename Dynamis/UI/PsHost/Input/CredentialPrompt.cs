@@ -48,7 +48,7 @@ public sealed class CredentialPrompt(
             }
 
             using (ImRaii.Disabled()) {
-                ImGui.Button("Submit");
+                ImGui.Button("Submit".Loc());
             }
         }
 
@@ -64,7 +64,7 @@ public sealed class CredentialPrompt(
 
         var enter = _passwordInput.Draw(ImGuiInputTextFlags.EnterReturnsTrue);
 
-        enter |= ImGui.Button("Submit");
+        enter |= ImGui.Button("Submit".Loc());
 
         if (enter) {
             _finishedValue = GetValue();

@@ -21,7 +21,7 @@ public sealed class ObjectTableWindow : Window, ISingletonWindow, IMessageObserv
     private Task<TableEntry[]>? _vmSnapshot;
 
     public ObjectTableWindow(ImGuiComponents imGuiComponents, IFramework framework, IObjectTable objectTable,
-        MessageHub messageHub) : base("Dynamis - Object Table", 0)
+        MessageHub messageHub) : base("Dynamis - Object Table".Loc(), 0)
     {
         _imGuiComponents = imGuiComponents;
         _framework = framework;
@@ -44,7 +44,7 @@ public sealed class ObjectTableWindow : Window, ISingletonWindow, IMessageObserv
 
     public override void Draw()
     {
-        ImGui.Checkbox("Show live table", ref _vmLive);
+        ImGui.Checkbox("Show live table".Loc(), ref _vmLive);
 
         if (_vmLive) {
             DrawTableLive();
@@ -56,15 +56,15 @@ public sealed class ObjectTableWindow : Window, ISingletonWindow, IMessageObserv
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Refresh")) {
+        if (ImGui.Button("Refresh".Loc())) {
             _vmSnapshot = _framework.RunOnFrameworkThread(TakeSnapshot);
         }
 
         if (!_vmSnapshot.IsCompleted) {
-            ImGui.TextUnformatted("Taking snapshot of object table...");
+            ImGui.TextUnformatted("Taking snapshot of object table...".Loc());
         } else if (_vmSnapshot.Exception is not null) {
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                ImGui.TextUnformatted("Failed taking snapshot of object table:");
+                ImGui.TextUnformatted("Failed taking snapshot of object table:".Loc());
             }
 
             ImGui.TextUnformatted(_vmSnapshot.Exception.ToString());
