@@ -73,13 +73,13 @@ public sealed unsafe class TextureInspector(
             return;
         }
 
-        using var tab = ImRaii.TabItem("Texture Preview");
+        using var tab = ImRaii.TabItem("Texture Preview".Loc());
         if (!tab) {
             return;
         }
 
         var state = window.GetCustomViewModel<ViewModel>();
-        ImGui.Checkbox("Shrink to Fit", ref state.ContainTextureView);
+        ImGui.Checkbox("Shrink to Fit".Loc(), ref state.ContainTextureView);
         if (pointer->ArraySize > 1) {
             ImGui.SameLine();
             var slice = (int)state.ArraySliceIndex;
@@ -93,7 +93,7 @@ public sealed unsafe class TextureInspector(
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Save to File")) {
+        if (ImGui.Button("Save to File".Loc())) {
             var safeHandle = new SafeTextureHandle(pointer, true);
             fileDialogManager.SaveFileDialog(
                 "Save Texture", ".tex,.atex,.dds", "texture.tex", ".tex", (ok, path) =>

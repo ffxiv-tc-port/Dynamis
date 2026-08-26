@@ -86,11 +86,11 @@ partial class DirectXInspector
         ImGui.TextUnformatted($"Stencil Read Mask: 0x{desc.StencilReadMask:X}");
         ImGui.TextUnformatted($"Stencil Write Mask: 0x{desc.StencilWriteMask:X}");
 
-        ImGui.TextUnformatted("Front: ");
+        ImGui.TextUnformatted("Front: ".Loc());
         ImGui.SameLine();
         DrawDesc(in desc.FrontFace);
 
-        ImGui.TextUnformatted("Back: ");
+        ImGui.TextUnformatted("Back: ".Loc());
         ImGui.SameLine();
         DrawDesc(in desc.BackFace);
     }

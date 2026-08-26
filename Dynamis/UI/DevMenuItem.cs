@@ -36,22 +36,22 @@ public sealed class DevMenuItem(
 
         ImGui.Separator();
 
-        if (ImGui.MenuItem("Toolbox")) {
+        if (ImGui.MenuItem("Toolbox".Loc())) {
             messageHub.Publish<OpenWindowMessage<ToolboxWindow>>();
         }
 
-        if (ImGui.MenuItem("Settings")) {
+        if (ImGui.MenuItem("Settings".Loc())) {
             messageHub.Publish<OpenWindowMessage<SettingsWindow>>();
         }
 
-        if (ImGui.MenuItem("Changelog")) {
+        if (ImGui.MenuItem("Changelog".Loc())) {
             messageHub.Publish<OpenWindowMessage<ChangelogWindow>>();
         }
 
         if (configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion) {
             var drawList = ImGui.GetWindowDrawList();
             var style = ImGui.GetStyle();
-            var min = ImGui.GetItemRectMin() + ImGui.CalcTextSize("Changelog") with
+            var min = ImGui.GetItemRectMin() + ImGui.CalcTextSize("Changelog".Loc()) with
             {
                 Y = 0.0f,
             };
@@ -61,8 +61,8 @@ public sealed class DevMenuItem(
                 drawList.AddText(
                     min + new Vector2(
                         style.ItemSpacing.X * 0.5f + style.ItemInnerSpacing.X,
-                        (max.Y - min.Y - ImGui.CalcTextSize("(NEW!)").Y) * 0.5f
-                    ), ImGuiColors.SuccessForeground.ToUInt32(), "(NEW!)"
+                        (max.Y - min.Y - ImGui.CalcTextSize("(NEW!)".Loc()).Y) * 0.5f
+                    ), ImGuiColors.SuccessForeground.ToUInt32(), "(NEW!)".Loc()
                 );
             } finally {
                 drawList.PopClipRect();

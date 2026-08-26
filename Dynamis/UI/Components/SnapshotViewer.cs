@@ -40,7 +40,7 @@ public sealed class SnapshotViewer(
         var itemInnerSpacing = ImGui.GetStyle().ItemInnerSpacing.X;
         var offset = (ImGui.GetFrameHeight() - ImGui.GetTextLineHeight()) * 0.5f;
         ImGui.SetCursorPos(ImGui.GetCursorPos() + new Vector2(0.0f, offset));
-        ImGui.TextUnformatted("Display Mode");
+        ImGui.TextUnformatted("Display Mode".Loc());
 
         ImGui.SameLine(0.0f, itemInnerSpacing);
         ImGui.SetCursorPos(ImGui.GetCursorPos() - new Vector2(0.0f, offset));
@@ -141,7 +141,7 @@ public sealed class SnapshotViewer(
         }
 
         ImGui.Separator();
-        ImGui.TextUnformatted("Click for options.");
+        ImGui.TextUnformatted("Click for options.".Loc());
 
         if (clicked) {
             contextMenu.Open(
@@ -569,19 +569,19 @@ public sealed class SnapshotViewer(
                 if (_class is
                     {
                     } @class && @class.Class.Kind == ClassKind.VirtualTable) {
-                    if (ImGui.Selectable("Inspect virtual table")) {
+                    if (ImGui.Selectable("Inspect virtual table".Loc())) {
                         messageHub.Publish(new InspectObjectMessage(FieldInfo.GetAddress(value), @class.Class, null, null));
                         ret = true;
                     }
 
                     if (ea is
                         {
-                        } eoAddress && ImGui.Selectable("Inspect embedded object")) {
+                        } eoAddress && ImGui.Selectable("Inspect embedded object".Loc())) {
                         messageHub.Publish(new InspectObjectMessage(eoAddress, null, null, null));
                         ret = true;
                     }
                 } else {
-                    if (ImGui.Selectable("Inspect object")) {
+                    if (ImGui.Selectable("Inspect object".Loc())) {
                         messageHub.Publish(
                             new InspectObjectMessage(
                                 FieldInfo.GetAddress(value) - (nint)(_class?.Displacement ?? 0), _class?.Class,
@@ -650,18 +650,18 @@ public sealed class SnapshotViewer(
             if (ea is
                 {
                 } address) {
-                if (ImGui.Selectable("Copy effective address")) {
+                if (ImGui.Selectable("Copy effective address".Loc())) {
                     ImGui.SetClipboardText(address.ToString("X"));
                     ret = true;
                 }
             }
 
-            if (ImGui.Selectable("Copy field offset")) {
+            if (ImGui.Selectable("Copy field offset".Loc())) {
                 ImGui.SetClipboardText(path.Offset.ToString("X"));
                 ret = true;
             }
 
-            if (ImGui.Selectable("Copy field path")) {
+            if (ImGui.Selectable("Copy field path".Loc())) {
                 ImGui.SetClipboardText(path.Path);
                 ret = true;
             }

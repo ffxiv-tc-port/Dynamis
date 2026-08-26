@@ -41,7 +41,7 @@ public sealed class FunctionInspector(MessageHub messageHub, ContextMenu context
             return;
         }
 
-        using var tab = ImRaii.TabItem("Function Disassembly");
+        using var tab = ImRaii.TabItem("Function Disassembly".Loc());
         if (!tab) {
             return;
         }
@@ -165,12 +165,12 @@ public sealed class FunctionInspector(MessageHub messageHub, ContextMenu context
                 {
                 } operandAddress) {
                 separator = true;
-                if (ImGui.Selectable("Inspect operand")) {
+                if (ImGui.Selectable("Inspect operand".Loc())) {
                     messageHub.Publish(new InspectObjectMessage(operandAddress, null, null, null));
                     ret = true;
                 }
 
-                if (ImGui.Selectable("Copy operand")) {
+                if (ImGui.Selectable("Copy operand".Loc())) {
                     ImGui.SetClipboardText($"{operandAddress:X}");
                     ret = true;
                 }
@@ -178,7 +178,7 @@ public sealed class FunctionInspector(MessageHub messageHub, ContextMenu context
 
             if (annotation is not null) {
                 separator = true;
-                if (ImGui.Selectable("Copy annotation")) {
+                if (ImGui.Selectable("Copy annotation".Loc())) {
                     ImGui.SetClipboardText(annotation);
                     ret = true;
                 }
@@ -188,12 +188,12 @@ public sealed class FunctionInspector(MessageHub messageHub, ContextMenu context
                 ImGui.Separator();
             }
 
-            if (ImGui.Selectable("Copy disassembled instruction")) {
+            if (ImGui.Selectable("Copy disassembled instruction".Loc())) {
                 ImGui.SetClipboardText(disassembly);
                 ret = true;
             }
 
-            if (_bytes.Length > 0 && ImGui.Selectable("Copy instruction bytes")) {
+            if (_bytes.Length > 0 && ImGui.Selectable("Copy instruction bytes".Loc())) {
                 var sb = new StringBuilder();
                 foreach (var b in _bytes) {
                     sb.Append($"{b:X2} ");
@@ -203,7 +203,7 @@ public sealed class FunctionInspector(MessageHub messageHub, ContextMenu context
             }
 
             ImGui.Separator();
-            if (ImGui.Selectable("Copy effective address")) {
+            if (ImGui.Selectable("Copy effective address".Loc())) {
                 ImGui.SetClipboardText(address.ToString("X"));
                 ret = true;
             }

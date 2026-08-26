@@ -24,7 +24,7 @@ public sealed class SigScannerWindow : Window, ISingletonWindow, IMessageObserve
     private readonly List<ScanResult> _vmResults   = [];
 
     public SigScannerWindow(ILogger<SigScannerWindow> logger, ISigScanner sigScanner,
-        ImGuiComponents imGuiComponents, MessageHub messageHub) : base("Dynamis - Signature Scanner", 0)
+        ImGuiComponents imGuiComponents, MessageHub messageHub) : base("Dynamis - Signature Scanner".Loc(), 0)
     {
         _logger = logger;
         _sigScanner = sigScanner;
@@ -54,31 +54,31 @@ public sealed class SigScannerWindow : Window, ISingletonWindow, IMessageObserve
         }
 
         ImGui.SameLine(0.0f, innerSpacing);
-        ImGui.TextUnformatted("Signature");
+        ImGui.TextUnformatted("Signature".Loc());
 
         ImGui.InputInt("Offset (for Static Address)", ref _vmOffset);
 
-        if (ImGui.Button("Scan Text")) {
+        if (ImGui.Button("Scan Text".Loc())) {
             RunScan(ScanType.Text);
         }
 
         ImGui.SameLine(0.0f, innerSpacing);
-        if (ImGui.Button("Scan Data")) {
+        if (ImGui.Button("Scan Data".Loc())) {
             RunScan(ScanType.Data);
         }
 
         ImGui.SameLine(0.0f, innerSpacing);
-        if (ImGui.Button("Scan Module")) {
+        if (ImGui.Button("Scan Module".Loc())) {
             RunScan(ScanType.Module);
         }
 
         ImGui.SameLine(0.0f, innerSpacing);
-        if (ImGui.Button("Scan Static Address")) {
+        if (ImGui.Button("Scan Static Address".Loc())) {
             RunScan(ScanType.StaticAddress);
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Clear History")) {
+        if (ImGui.Button("Clear History".Loc())) {
             _vmResults.Clear();
         }
 
@@ -117,9 +117,9 @@ public sealed class SigScannerWindow : Window, ISingletonWindow, IMessageObserve
             } else {
                 using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
                     if (result.Exception is not null) {
-                        ImGui.Selectable("Error");
+                        ImGui.Selectable("Error".Loc());
                     } else {
-                        ImGui.TextUnformatted("Not Found");
+                        ImGui.TextUnformatted("Not Found".Loc());
                     }
                 }
 

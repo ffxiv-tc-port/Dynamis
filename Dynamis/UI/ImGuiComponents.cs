@@ -51,7 +51,7 @@ public sealed partial class ImGuiComponents(
             ShowTooltip = () =>
             {
                 using var _ = ImRaii.Tooltip();
-                ImGui.Text("Toolbox");
+                ImGui.Text("Toolbox".Loc());
             },
             Priority = 1,
         };
@@ -64,7 +64,7 @@ public sealed partial class ImGuiComponents(
             IconOffset = new(0, 1),
             ShowTooltip = () =>
             {
-                ImGui.Text("Settings");
+                ImGui.Text("Settings".Loc());
             },
             Priority = 2,
         };
@@ -77,11 +77,11 @@ public sealed partial class ImGuiComponents(
             IconOffset = new(0, 1),
             ShowTooltip = () =>
             {
-                ImGui.Text("Changelog");
+                ImGui.Text("Changelog".Loc());
                 if (configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion) {
                     ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
                     using var color = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.SuccessForeground);
-                    ImGui.TextUnformatted("(NEW!)");
+                    ImGui.TextUnformatted("(NEW!)".Loc());
                 }
             },
             Priority = 3,
@@ -174,7 +174,7 @@ public sealed partial class ImGuiComponents(
             }
 
             ImGui.Separator();
-            ImGui.TextUnformatted("Click to copy to clipboard.");
+            ImGui.TextUnformatted("Click to copy to clipboard.".Loc());
         }
     }
 
@@ -203,7 +203,7 @@ public sealed partial class ImGuiComponents(
         }
 
         if (ImGui.IsItemHovered()) {
-            ImGui.TextUnformatted("Address: ");
+            ImGui.TextUnformatted("Address: ".Loc());
             ImGui.SameLine(0, 0);
             using (ImRaii.PushFont(UiBuilder.MonoFont)) {
                 ImGui.TextUnformatted(pointer.ToString("X"));
@@ -215,7 +215,7 @@ public sealed partial class ImGuiComponents(
             }
 
             ImGui.Separator();
-            ImGui.TextUnformatted("Click for options.");
+            ImGui.TextUnformatted("Click for options.".Loc());
         }
     }
 
@@ -252,7 +252,7 @@ public sealed partial class ImGuiComponents(
     {
         var protect = VirtualMemory.GetProtection(pointer);
         if (protect.CanExecute()) {
-            ImGui.TextUnformatted("Function pointer");
+            ImGui.TextUnformatted("Function pointer".Loc());
         }
 
         var wellKnown = addressIdentifier.Identify(pointer);
@@ -286,7 +286,7 @@ public sealed partial class ImGuiComponents(
             if (@class.Truncated) {
                 ImGui.SameLine();
                 using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                    ImGui.TextUnformatted("(truncated)");
+                    ImGui.TextUnformatted("(truncated)".Loc());
                 }
             }
         } else {
@@ -322,7 +322,7 @@ public sealed partial class ImGuiComponents(
         public bool Draw()
         {
             var ret = false;
-            if (messageHub is not null && pointer != 0 && ImGui.Selectable("Inspect object")) {
+            if (messageHub is not null && pointer != 0 && ImGui.Selectable("Inspect object".Loc())) {
                 messageHub.Publish(new InspectObjectMessage(pointer, @class?.Invoke(), null, name?.Invoke()));
                 ret = true;
             }

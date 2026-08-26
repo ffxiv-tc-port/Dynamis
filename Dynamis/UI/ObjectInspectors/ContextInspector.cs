@@ -17,15 +17,15 @@ public sealed class ContextInspector(ImGuiComponents imGuiComponents, ModuleAddr
     public unsafe void DrawAdditionalHeaderDetails(Context* pointer, ObjectSnapshot snapshot, bool live,
         ObjectInspectorWindow window)
     {
-        ImGui.TextUnformatted("Instruction Pointer: ");
+        ImGui.TextUnformatted("Instruction Pointer: ".Loc());
         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
         imGuiComponents.DrawPointer((nint)pointer->Rip, null, null);
 
-        ImGui.TextUnformatted("This Argument: ");
+        ImGui.TextUnformatted("This Argument: ".Loc());
         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
         imGuiComponents.DrawPointer((nint)pointer->Rcx, null, null);
 
-        ImGui.TextUnformatted("Stack Pointer: ");
+        ImGui.TextUnformatted("Stack Pointer: ".Loc());
         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
         var rsp = (nint)pointer->Rsp;
         ImGuiComponents.DrawCopyable(rsp == 0 ? "nullptr" : $"0x{rsp:X}", true, () => $"{rsp:X}");
@@ -35,7 +35,7 @@ public sealed class ContextInspector(ImGuiComponents imGuiComponents, ModuleAddr
         ObjectInspectorWindow window)
     {
         if (snapshot.StackTrace is not null && snapshot.StackTrace.Length > 0) {
-            using var tab = ImRaii.TabItem("Stack Snapshot");
+            using var tab = ImRaii.TabItem("Stack Snapshot".Loc());
             if (tab) {
                 window.DrawAssociatedSnapshotHeader();
                 using var _ = ImRaii.Child("###memorySnapshot", -Vector2.One);
@@ -43,7 +43,7 @@ public sealed class ContextInspector(ImGuiComponents imGuiComponents, ModuleAddr
                  && (nint)snapshot.StackTrace[0].AddrStack.Offset > snapshot.AssociatedSnapshot.Address.Value) {
                     using var node = ImRaii.TreeNode($"???###-1", ImGuiTreeNodeFlags.DefaultOpen);
                     if (node) {
-                        ImGui.TextUnformatted("Stack Pointer: ");
+                        ImGui.TextUnformatted("Stack Pointer: ".Loc());
                         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
                         var rsp = snapshot.AssociatedSnapshot.Address.Value;
                         ImGuiComponents.DrawCopyable(rsp == 0 ? "nullptr" : $"0x{rsp:X}", true, () => $"{rsp:X}");
@@ -63,11 +63,11 @@ public sealed class ContextInspector(ImGuiComponents imGuiComponents, ModuleAddr
                         ImGuiTreeNodeFlags.DefaultOpen
                     );
                     if (node) {
-                        ImGui.TextUnformatted("Instruction Pointer: ");
+                        ImGui.TextUnformatted("Instruction Pointer: ".Loc());
                         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
                         ImGuiComponents.DrawCopyable(rip == 0 ? "nullptr" : $"0x{rip:X}", true, () => $"{rip:X}");
 
-                        ImGui.TextUnformatted("Stack Pointer: ");
+                        ImGui.TextUnformatted("Stack Pointer: ".Loc());
                         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
                         var rsp = snapshot.StackTrace[i].AddrStack.Offset;
                         ImGuiComponents.DrawCopyable(rsp == 0 ? "nullptr" : $"0x{rsp:X}", true, () => $"{rsp:X}");
@@ -86,7 +86,7 @@ public sealed class ContextInspector(ImGuiComponents imGuiComponents, ModuleAddr
                 }
             }
         } else if (snapshot.AssociatedSnapshot is not null) {
-            using var tab = ImRaii.TabItem("Stack Snapshot");
+            using var tab = ImRaii.TabItem("Stack Snapshot".Loc());
             if (tab) {
                 window.DrawAssociatedSnapshotHeader();
                 using var _ = ImRaii.Child("###memorySnapshot", -Vector2.One);
