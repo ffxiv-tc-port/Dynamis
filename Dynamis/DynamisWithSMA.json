@@ -1,5 +1,5 @@
 {
-  "Author": "Nylfae, Lother",
+  "Author": "Nylfae",
   "Name": "Dynamis (with Hosted PowerShell)",
   "InternalName": "DynamisWithSMA",
   "Punchline": "開發/除錯/逆向工程工具與實驗工作台（含內建 PowerShell）。",
@@ -11,6 +11,6 @@
     "powershell"
   ],
   "AssemblyVersion": "9.0.0.1",
-  "IconUrl": "https://raw.githubusercontent.com/Lother/DalamudPluginsTC/main/icons/DynamisWithSMA.png",
-  "RepoUrl": "https://github.com/Lother/Dynamis"
+  "IconUrl": "https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/icons/DynamisWithSMA.png",
+  "RepoUrl": "https://github.com/ffxiv-tc-port/Dynamis"
 }

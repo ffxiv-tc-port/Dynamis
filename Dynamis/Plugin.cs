@@ -1,4 +1,5 @@
-﻿using Dalamud.Interface.ImGuiFileDialog;
+﻿using Dalamud.Game;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
@@ -32,7 +33,24 @@ public sealed class Plugin : IDalamudPlugin
 
     public static IPluginLog? Log { get; private set; }
 
-    public Plugin(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog)
+    // TC note: constructor-parameter injection (rather than the newer
+    // IDalamudService-marker-interface + IDalamudPluginInterface.GetRequiredService<T>()
+    // pair that upstream's "Simplify Dalamud service instantiation" commit switched to)
+    // is intentional here, not a stray revert - TC's Dalamud has neither of those, and this
+    // is exactly how upstream itself sourced these services before that commit. Reflectively
+    // calling IDalamudPluginInterface.Create<T>() for an *interface* type (what a prior TC
+    // port attempt of AddDalamudServices() did) doesn't work: Create<T>() is for constructing
+    // plugin-defined classes with [PluginService] properties, not for handing back Dalamud's
+    // own service singletons - it throws "An eligible ctor with satisfiable services could
+    // not be found", which silently faults the whole host (RunAsync() is never awaited
+    // outside Dispose(), so nothing ever surfaced this) and meant none of the IHostedServices
+    // - including the one registering /dynamis - ever actually started.
+    public Plugin(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog,
+        ITextureProvider textureProvider, ITextureReadbackProvider readbackProvider,
+        ICommandManager commandManager, IChatGui chatGui, IDtrBar dtrBar, ISigScanner sigScanner,
+        IGameInteropProvider gameInteropProvider, ITitleScreenMenu titleScreenMenu,
+        INotificationManager notificationManager, IFramework framework, IObjectTable objectTable,
+        IDataManager dataManager)
     {
         Log = pluginLog;
         Localization.Init(pluginInterface.AssemblyLocation.DirectoryName);
@@ -53,10 +71,20 @@ public sealed class Plugin : IDalamudPlugin
                     {
                         collection.AddSingleton(pluginInterface);
                         collection.AddSingleton(pluginLog);
+                        collection.AddSingleton(textureProvider);
+                        collection.AddSingleton(readbackProvider);
+                        collection.AddSingleton(commandManager);
+                        collection.AddSingleton(chatGui);
+                        collection.AddSingleton(dtrBar);
+                        collection.AddSingleton(sigScanner);
+                        collection.AddSingleton(gameInteropProvider);
+                        collection.AddSingleton(titleScreenMenu);
+                        collection.AddSingleton(notificationManager);
+                        collection.AddSingleton(framework);
+                        collection.AddSingleton(objectTable);
+                        collection.AddSingleton(dataManager);
 
                         collection.AddSingleton(pluginInterface.UiBuilder);
-
-                        collection.AddDalamudServices();
 
                         collection.AddSingleton(new Dalamud.Localization("Dynamis.Localization.", "", useEmbedded: true));
                         collection.AddSingleton(new WindowSystem("Dynamis"));
