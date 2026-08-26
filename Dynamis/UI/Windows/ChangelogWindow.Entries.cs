@@ -2,6 +2,33 @@ namespace Dynamis.UI.Windows;
 
 partial class ChangelogWindow
 {
+    private void Draw0_1_4_2()
+    {
+        if (!DrawVersionHeader(0, 1, 4, 2, 3)) {
+            return;
+        }
+
+        ImGuiComponents.SeparatorText("Bug fixes and improvements");
+
+        // BulletText 是本專案自己的 helper，簽章是 (string)。上游改寫成 "..."u8 之後在
+        // API13 這側接不上（本地的 Dalamud.Bindings.ImGui 對 BulletText 沒有
+        // ReadOnlySpan<byte> 多載，雖然 SeparatorText/InputText 有）。本檔既有條目也一律是普通字串。
+        BulletText("Made the changelog window less eager to respond to /commands that aren't for it.");
+    }
+
+    private void Draw0_1_4_1()
+    {
+        if (!DrawVersionHeader(0, 1, 4, 1, 2)) {
+            return;
+        }
+
+        ImGuiComponents.SeparatorText("Bug fixes and improvements");
+
+        BulletText("Added interface visibility (in cutscene, group pose, etc.) settings.");
+        BulletText("Fixed a bug with annotations of overlapping fields.");
+        BulletText("Tried to make IPFD less finicky.");
+    }
+
     private void Draw0_1_4_0()
     {
         if (!DrawVersionHeader(0, 1, 4, 0, 1)) {
