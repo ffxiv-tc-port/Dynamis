@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Kernel;
 
@@ -12,8 +13,8 @@ public unsafe class SafeTextureHandle : SafeHandle, IDalamudTextureWrap
     public override bool IsInvalid
         => handle == 0;
 
-    public nint ImGuiHandle
-        => (nint)Texture->D3D11ShaderResourceView;
+    public ImTextureID Handle
+        => new((nint)Texture->D3D11ShaderResourceView);
 
     public int Width
         => (int)Texture->AllocatedWidth;

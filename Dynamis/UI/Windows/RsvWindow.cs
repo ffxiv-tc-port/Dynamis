@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;

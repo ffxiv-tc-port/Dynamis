@@ -1,4 +1,5 @@
 using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dynamis.Utility;
 using Dalamud.Interface.ImGuiFileDialog;
@@ -10,7 +11,6 @@ using Dynamis.Interop.Win32;
 using Dynamis.Messaging;
 using Dynamis.UI.ObjectInspectors;
 using Dynamis.UI.Windows;
-using ImGuiNET;
 
 namespace Dynamis.UI;
 
@@ -90,53 +90,70 @@ public sealed partial class ImGuiComponents(
     private const           float   SeparatorThickness = 1.0f;
     private static readonly Vector2 SeparatorTextAlign = new(0.02f, 0.5f);
 
-    /// <remarks>
-    /// TC note: the original implementation used Dalamud.Bindings.ImGui's internal
-    /// <c>ImGuiP</c>/<c>ImRect</c> surface (post-api13 only) to precisely replicate Dear
-    /// ImGui's native SeparatorText layout. TC's client only has classic ImGuiNET, which
-    /// exposes no equivalent internal API, so this is a simplified reimplementation using
-    /// only public ImGuiNET calls. Visually it's "separator line, then label" instead of a
-    /// label embedded within the separator, but no caller in this repo passes a non-zero
-    /// <paramref name="extraW"/>, so the simplification doesn't affect any current usage.
-    /// </remarks>
-    public static void SeparatorText(string text, float extraW = 0.0f)
+    public static void SeparatorText(ImU8String text, float extraW = 0.0f)
     {
         var style = ImGui.GetStyle();
         var drawList = ImGui.GetWindowDrawList();
+        var window = ImGuiP.GetCurrentWindow();
 
         var labelSize = ImGui.CalcTextSize(text);
         var pos = ImGui.GetCursorScreenPos();
         var padding = style.FramePadding;
-        var availW = ImGui.GetContentRegionAvail().X;
 
-        var height = MathF.Max(labelSize.Y + padding.Y * 2.0f, SeparatorThickness);
-        var sepsY = pos.Y + height * 0.5f;
+        var minSize = new Vector2(
+            labelSize.X + extraW + padding.X * 2.0f, MathF.Max(labelSize.Y + padding.Y * 2.0f, SeparatorThickness)
+        );
+        var bb = new ImRect(
+            pos, window.WorkRect.Max with
+            {
+                Y = pos.Y + minSize.Y,
+            }
+        );
+        var textBaselineY =
+            MathF.Truncate((bb.Max.Y - bb.Min.Y - labelSize.Y) * SeparatorTextAlign.Y + 0.999f);
+        ImGuiP.ItemSize(minSize, textBaselineY);
+        if (!ImGuiP.ItemAdd(bb, 0)) {
+            return;
+        }
+
+        var sep1X1 = pos.X;
+        var sep2X2 = bb.Max.X;
+        var sepsY = MathF.Truncate((bb.Min.Y + bb.Max.Y) * 0.5f + 0.999f);
+
+        var labelAvailW = MathF.Max(0.0f, sep2X2 - sep1X1 - padding.X * 2.0f);
+        var labelPos = new Vector2(
+            pos.X + padding.X + MathF.Max(0.0f, (labelAvailW - labelSize.X - extraW) * SeparatorTextAlign.X),
+            pos.Y + textBaselineY
+        );
+
+        // This allows using SameLine() to position something in the 'extra_w'
+        window.DC.CursorPosPrevLine = window.DC.CursorPosPrevLine with
+        {
+            X = labelPos.X + labelSize.X,
+        };
+
         var separatorCol = ImGui.GetColorU32(ImGuiCol.Separator);
-
         if (labelSize.X > 0.0f) {
-            var sep1X2 = pos.X + MathF.Max(0.0f, (availW - labelSize.X - extraW) * SeparatorTextAlign.X)
-                          - style.ItemSpacing.X;
-            if (sep1X2 > pos.X && SeparatorThickness > 0.0f) {
-                drawList.AddLine(new(pos.X, sepsY), new(sep1X2, sepsY), separatorCol, SeparatorThickness);
+            var sep1X2 = labelPos.X - style.ItemSpacing.X;
+            var sep2X1 = labelPos.X + labelSize.X + extraW + style.ItemSpacing.X;
+            if (sep1X2 > sep1X1 && SeparatorThickness > 0.0f) {
+                drawList.AddLine(new(sep1X1, sepsY), new(sep1X2, sepsY), separatorCol, SeparatorThickness);
             }
 
-            ImGui.SetCursorScreenPos(new(MathF.Max(pos.X, sep1X2 + style.ItemSpacing.X), pos.Y));
-            ImGui.TextUnformatted(text);
-
-            var labelEndX = ImGui.GetItemRectMax().X;
-            var sep2X1 = labelEndX + extraW + style.ItemSpacing.X;
-            var sep2X2 = pos.X + availW;
             if (sep2X2 > sep2X1 && SeparatorThickness > 0.0f) {
                 drawList.AddLine(new(sep2X1, sepsY), new(sep2X2, sepsY), separatorCol, SeparatorThickness);
             }
 
-            ImGui.SetCursorScreenPos(new(pos.X, pos.Y + height));
+            ImGuiP.RenderTextEllipsis(
+                drawList, labelPos, bb.Max + style.ItemSpacing with
+                {
+                    X = 0.0f,
+                }, bb.Max.X, bb.Max.X, text, labelSize
+            );
         } else {
             if (SeparatorThickness > 0.0f) {
-                drawList.AddLine(new(pos.X, sepsY), new(pos.X + availW, sepsY), separatorCol, SeparatorThickness);
+                drawList.AddLine(new(sep1X1, sepsY), new(sep2X2, sepsY), separatorCol, SeparatorThickness);
             }
-
-            ImGui.Dummy(new(availW, height));
         }
     }
 
