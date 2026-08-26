@@ -1,4 +1,5 @@
 using System.Reflection;
+using Dalamud.Game;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -72,13 +73,35 @@ internal static class DependencyInjectionExtensions
         }
     }
 
+    // TC note: TC's Dalamud has no `Dalamud.IoC.IDalamudService` marker interface (a newer
+    // Dalamud convenience that lets every plugin-service interface be discovered generically
+    // via reflection over Dalamud.dll's exported types) and no
+    // `IDalamudPluginInterface.GetRequiredService<T>()` either - both are newer-Dalamud-only
+    // (see the shared skill notes' "recurring old-API-generation compile fixes" list). The
+    // old-API equivalent is `pluginInterface.Create<T>()`, which populates a fresh instance's
+    // `[PluginService]`-attributed properties - but there's no generic "give me every
+    // registered Dalamud service interface" enumeration without that marker interface, so
+    // this lists the specific Dalamud service interfaces this repo actually consumes
+    // (found via `grep` across the whole tree for constructor-injected `I*` types) instead of
+    // scanning for all of them.
+    private static readonly Type[] KnownDalamudServiceTypes =
+    [
+        typeof(IChatGui), typeof(ICommandManager), typeof(IDataManager), typeof(IDtrBar),
+        typeof(IFramework), typeof(IGameInteropProvider), typeof(INotificationManager),
+        typeof(IObjectTable), typeof(IPluginLog), typeof(ISigScanner), typeof(ITextureProvider),
+        typeof(ITextureReadbackProvider),
+    ];
+
     public static void AddDalamudServices(this IServiceCollection collection)
     {
-        var iType = typeof(IDalamudService);
-        foreach (var type in iType.Assembly.ExportedTypes.Where(iType.IsAssignableFrom)) {
+        var createMethod = typeof(IDalamudPluginInterface).GetMethod(nameof(IDalamudPluginInterface.Create))!;
+        foreach (var type in KnownDalamudServiceTypes) {
             if (collection.All(t => t.ServiceType != type)) {
+                var genericCreate = createMethod.MakeGenericMethod(type);
                 collection.AddSingleton(
-                    type, provider => provider.GetRequiredService<IDalamudPluginInterface>().GetRequiredService(type)
+                    type, provider => genericCreate.Invoke(
+                        provider.GetRequiredService<IDalamudPluginInterface>(), [Array.Empty<object>(),]
+                    )!
                 );
             }
         }

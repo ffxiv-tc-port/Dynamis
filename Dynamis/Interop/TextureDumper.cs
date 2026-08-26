@@ -21,10 +21,18 @@ public sealed class TextureDumper(ITextureReadbackProvider readbackProvider)
             );
     }
 
+    // TC note: TC's Dalamud's ITextureReadbackProvider only exposes GetRawImageAsync (a
+    // single top mip, single array slice) - the batch GetAllRawImagesAsync(wrap, leaveOpen,
+    // ct) used here is a newer Dalamud addition with no TC equivalent, so multi-mip/
+    // multi-array-slice export isn't reproducible. Simplified to dump just the single image
+    // Dalamud gives us (mipLevels = 1, images = [that one image]) rather than dropping the
+    // "Save to File" feature entirely.
     public async Task SaveToFileAsync(SafeTextureHandle texture, string path,
         CancellationToken cancellationToken = default)
     {
-        var (mipLevels, images) = await readbackProvider.GetAllRawImagesAsync(texture, true, cancellationToken);
+        var image = await readbackProvider.GetRawImageAsync(texture, cancellationToken: cancellationToken);
+        var images = new[] { image, };
+        const int mipLevels = 1;
         await using var outputStream = File.Create(path);
         if (Path.GetExtension(path).ToLowerInvariant() is ".tex" or ".atex") {
             await SaveAsTexAsync(outputStream, mipLevels, images);
@@ -135,10 +143,11 @@ public sealed class TextureDumper(ITextureReadbackProvider readbackProvider)
             DxgiFormat.DxgiFormatBc1Unorm             => TexFile.TextureFormat.BC1,
             DxgiFormat.DxgiFormatBc2Unorm             => TexFile.TextureFormat.BC2,
             DxgiFormat.DxgiFormatBc3Unorm             => TexFile.TextureFormat.BC3,
-            DxgiFormat.DxgiFormatBc4Unorm             => TexFile.TextureFormat.BC4,
-            DxgiFormat.DxgiFormatBc5Unorm             => TexFile.TextureFormat.BC5,
-            DxgiFormat.DxgiFormatBc6HSf16             => TexFile.TextureFormat.BC6H,
-            DxgiFormat.DxgiFormatBc7Unorm             => TexFile.TextureFormat.BC7,
+            // TC note: TC's Lumina.dll's TexFile.TextureFormat predates BC4/BC6H (only has
+            // BC1/BC2/BC3/BC5/BC7) - no lossless equivalent exists, so these fall through to
+            // Unknown same as any other unrecognized format below.
+            DxgiFormat.DxgiFormatBc5Unorm              => TexFile.TextureFormat.BC5,
+            DxgiFormat.DxgiFormatBc7Unorm              => TexFile.TextureFormat.BC7,
             DxgiFormat.DxgiFormatR16G16B16A16Typeless => TexFile.TextureFormat.D16,
             DxgiFormat.DxgiFormatR24G8Typeless        => TexFile.TextureFormat.D24S8,
             DxgiFormat.DxgiFormatR16Typeless          => TexFile.TextureFormat.Shadow16,

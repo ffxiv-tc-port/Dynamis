@@ -35,6 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog)
     {
         Log = pluginLog;
+        Localization.Init(pluginInterface.AssemblyLocation.DirectoryName);
 
         _hostBuilderRunTask =
             new HostBuilder()

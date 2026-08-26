@@ -2,13 +2,13 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using Dynamis.Configuration;
 using Dynamis.Interop;
 using Dynamis.Interop.Win32;
 using Dynamis.Messaging;
 using Dynamis.Utility;
+using ImGuiNET;
 
 namespace Dynamis.UI.Components;
 
@@ -545,19 +545,19 @@ public sealed class SnapshotViewer(
                 if (_class is
                     {
                     } @class && @class.Class.Kind == ClassKind.VirtualTable) {
-                    if (ImGui.Selectable("Inspect virtual table"u8)) {
+                    if (ImGui.Selectable("Inspect virtual table")) {
                         messageHub.Publish(new InspectObjectMessage(FieldInfo.GetAddress(value), @class.Class, null, null));
                         ret = true;
                     }
 
                     if (ea is
                         {
-                        } eoAddress && ImGui.Selectable("Inspect embedded object"u8)) {
+                        } eoAddress && ImGui.Selectable("Inspect embedded object")) {
                         messageHub.Publish(new InspectObjectMessage(eoAddress, null, null, null));
                         ret = true;
                     }
                 } else {
-                    if (ImGui.Selectable("Inspect object"u8)) {
+                    if (ImGui.Selectable("Inspect object")) {
                         messageHub.Publish(
                             new InspectObjectMessage(
                                 FieldInfo.GetAddress(value) - (nint)(_class?.Displacement ?? 0), _class?.Class,
@@ -626,18 +626,18 @@ public sealed class SnapshotViewer(
             if (ea is
                 {
                 } address) {
-                if (ImGui.Selectable("Copy effective address"u8)) {
+                if (ImGui.Selectable("Copy effective address")) {
                     ImGui.SetClipboardText(address.ToString("X"));
                     ret = true;
                 }
             }
 
-            if (ImGui.Selectable("Copy field offset"u8)) {
+            if (ImGui.Selectable("Copy field offset")) {
                 ImGui.SetClipboardText(path.Offset.ToString("X"));
                 ret = true;
             }
 
-            if (ImGui.Selectable("Copy field path"u8)) {
+            if (ImGui.Selectable("Copy field path")) {
                 ImGui.SetClipboardText(path.Path);
                 ret = true;
             }

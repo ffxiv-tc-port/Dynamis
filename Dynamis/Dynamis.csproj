@@ -1,17 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.SDK/15.0.0">
+<Project Sdk="Dalamud.NET.SDK/12.0.2">
     <PropertyGroup>
         <LangVersion>preview</LangVersion>
-        <Authors></Authors>
+        <Authors>Nylfae, Lother</Authors>
         <Company></Company>
-        <Version>9.0.0.1</Version>
-        <Description>Developer/debugging/RE tool and experiment workbench.</Description>
+        <Description>開發/除錯/逆向工程工具與實驗工作台。</Description>
         <Copyright></Copyright>
-        <PackageProjectUrl>https://github.com/Exter-N/Dynamis</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/Lother/Dynamis</PackageProjectUrl>
         <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
         <IsPackable>false</IsPackable>
         <ImplicitUsings>true</ImplicitUsings>
     </PropertyGroup>
+
+    <PropertyGroup>
+        <BuildNumberFile>$(MSBuildProjectDirectory)\BuildNumber.txt</BuildNumberFile>
+        <_PreviousBuildNumber Condition="Exists('$(BuildNumberFile)')">$([System.IO.File]::ReadAllText('$(BuildNumberFile)').Trim())</_PreviousBuildNumber>
+        <_PreviousBuildNumber Condition="'$(_PreviousBuildNumber)' == ''">0</_PreviousBuildNumber>
+        <BuildNumber>$([MSBuild]::Add($(_PreviousBuildNumber), 1))</BuildNumber>
+        <VersionPrefix>7.15.0</VersionPrefix>
+        <Version>$(VersionPrefix).$(BuildNumber)</Version>
+        <AssemblyVersion>$(Version)</AssemblyVersion>
+        <FileVersion>$(Version)</FileVersion>
+    </PropertyGroup>
+    <Target Name="PersistBuildNumber" AfterTargets="Build">
+        <WriteLinesToFile File="$(BuildNumberFile)" Lines="$(BuildNumber)" Overwrite="true" />
+    </Target>
 
     <PropertyGroup>
         <Use_DalamudPackager>false</Use_DalamudPackager>
@@ -40,10 +53,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Reference Include="BCnEncoder">
-            <HintPath>$(DalamudLibPath)BCnEncoder.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
         <Reference Include="CheapLoc">
             <HintPath>$(DalamudLibPath)CheapLoc.dll</HintPath>
             <Private>false</Private>
@@ -56,9 +65,31 @@
             <HintPath>$(DalamudLibPath)TerraFX.Interop.Windows.dll</HintPath>
             <Private>false</Private>
         </Reference>
+        <!-- TC note: TC's bundled Dalamud has no BCnEncoder.dll at all (unlike the other
+             HintPath references above, which do exist there) - pull it from NuGet instead
+             of assuming Dalamud ships it. SharpDX assemblies DO exist in TC's Dalamud
+             folder (this repo's pre-api13 base already targeted classic SharpDX, not
+             TerraFX.Interop.DirectX), but weren't declared as explicit References here. -->
+        <Reference Include="SharpDX">
+            <HintPath>$(DalamudLibPath)SharpDX.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="SharpDX.Direct3D11">
+            <HintPath>$(DalamudLibPath)SharpDX.Direct3D11.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="SharpDX.DXGI">
+            <HintPath>$(DalamudLibPath)SharpDX.DXGI.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="SharpDX.Mathematics">
+            <HintPath>$(DalamudLibPath)SharpDX.Mathematics.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="BCnEncoder.Net" Version="2.3.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.7" />
         <PackageReference Include="YamlDotNet" Version="15.1.2" />
     </ItemGroup>
@@ -75,12 +106,36 @@
         <PackageReference Include="System.Management.Automation" Version="7.6.0-preview.3" />
     </ItemGroup>
 
+    <!-- TC note: DirectXInspector was added post-api13 (b20a4f4) directly against
+         TerraFX.Interop.DirectX's newer struct codegen (explicit fixed-buffer wrapper
+         structs with ReadOnlySpan conversion operators). TC's bundled Dalamud ships an
+         older TerraFX.Interop.Windows.dll whose DirectX structs use classic C# `fixed`
+         buffers instead, which don't support that conversion and need pointer/unsafe
+         access patterns throughout - a genuine codegen-generation gap across ~1500 lines,
+         not a renameable API mismatch (same category as vnavmesh's ZoneSharedGroup gap or
+         WrathCombo's VFX-tracking gap in the shared skill notes). Excluded rather than
+         rewritten; this only drops the DirectX resource descriptor inspector tab, nothing
+         else depends on these two files (IDynamicObjectInspector is assembly-scanned, see
+         Plugin.cs's AddImplementationSingletons<IObjectInspector> call). -->
     <ItemGroup>
-        <EmbeddedResource Include="Resources\*.png" />
-        <None Include="*.png" />
+        <Compile Remove="UI\ObjectInspectors\DirectXInspector.cs" />
+        <Compile Remove="UI\ObjectInspectors\DirectXInspector.DrawDesc.cs" />
     </ItemGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="Resources\*.png" />
+        <None Include="*.png" />
+        <!-- zh-TW externalized loc store; ships in BOTH the Dynamis and DynamisWithSMA
+             outputs since both configurations build from this project (release.yml zips
+             each bin dir wholesale). -->
+        <None Include="LanguageChineseTraditional.ini" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <!-- TC note: this machine has no Rust toolchain installed, so the ipfd native crate
+         can't be built locally - guard the copy so a local dev build without Rust doesn't
+         hard-fail with MSB3030. CI still has actions-rust-lang/setup-rust-toolchain and
+         builds the crate before this csproj, so the real release output is unaffected. -->
+    <ItemGroup Condition="Exists('..\ipfd\target\x86_64-pc-windows-gnu\release\dynamis_ipfd.dll')">
         <None Include="..\ipfd\target\x86_64-pc-windows-gnu\release\dynamis_ipfd.dll" CopyToOutputDirectory="Always" />
     </ItemGroup>
 

@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using Dalamud.Bindings.ImGui;
+using ImGuiNET;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
@@ -37,7 +37,7 @@ public sealed class RsvWindow : Window, ISingletonWindow, IMessageObserver<Comma
             return;
         }
 
-        if (ImGui.Button("Export"u8)) {
+        if (ImGui.Button("Export")) {
             _fileDialogManager.SaveFileDialog(
                 "Export RSV Map", ".json", "rsv.json", ".json", (ok, path) =>
                 {
@@ -60,14 +60,14 @@ public sealed class RsvWindow : Window, ISingletonWindow, IMessageObserver<Comma
             return;
         }
 
-        ImGuiComponents.SeparatorText("RSV Map"u8);
-        using var table = ImRaii.Table("##rsvMap"u8, 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit);
+        ImGuiComponents.SeparatorText("RSV Map");
+        using var table = ImRaii.Table("##rsvMap", 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit);
         if (!table) {
             return;
         }
 
-        ImGui.TableSetupColumn("Key"u8,   ImGuiTableColumnFlags.WidthStretch, 0.35f);
-        ImGui.TableSetupColumn("Value"u8, ImGuiTableColumnFlags.WidthStretch, 0.65f);
+        ImGui.TableSetupColumn("Key",   ImGuiTableColumnFlags.WidthStretch, 0.35f);
+        ImGui.TableSetupColumn("Value", ImGuiTableColumnFlags.WidthStretch, 0.65f);
         ImGui.TableHeadersRow();
 
         foreach (var (key, value) in *layoutWorld->RsvMap) {
@@ -85,14 +85,14 @@ public sealed class RsvWindow : Window, ISingletonWindow, IMessageObserver<Comma
             return;
         }
 
-        ImGuiComponents.SeparatorText("RSF Map"u8);
-        using var table = ImRaii.Table("##rsfMap"u8, 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit);
+        ImGuiComponents.SeparatorText("RSF Map");
+        using var table = ImRaii.Table("##rsfMap", 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit);
         if (!table) {
             return;
         }
 
-        ImGui.TableSetupColumn("Path Hash"u8, ImGuiTableColumnFlags.WidthStretch, 0.2f);
-        ImGui.TableSetupColumn("Bytes"u8,     ImGuiTableColumnFlags.WidthStretch, 0.8f);
+        ImGui.TableSetupColumn("Path Hash", ImGuiTableColumnFlags.WidthStretch, 0.2f);
+        ImGui.TableSetupColumn("Bytes",     ImGuiTableColumnFlags.WidthStretch, 0.8f);
         ImGui.TableHeadersRow();
 
         foreach (var (key, value) in *layoutWorld->RsfMap) {
@@ -127,7 +127,7 @@ public sealed class RsvWindow : Window, ISingletonWindow, IMessageObserver<Comma
         var layoutWorld = LayoutWorld.Instance();
 
         jsonWriter.WriteStartObject();
-        jsonWriter.WritePropertyName("rsv"u8);
+        jsonWriter.WritePropertyName("rsv");
         if (layoutWorld is not null && layoutWorld->RsvMap is not null) {
             jsonWriter.WriteStartObject();
             foreach (var (key, value) in *layoutWorld->RsvMap) {
@@ -139,7 +139,7 @@ public sealed class RsvWindow : Window, ISingletonWindow, IMessageObserver<Comma
             jsonWriter.WriteNullValue();
         }
 
-        jsonWriter.WritePropertyName("rsf"u8);
+        jsonWriter.WritePropertyName("rsf");
         if (layoutWorld is not null && layoutWorld->RsfMap is not null) {
             jsonWriter.WriteStartObject();
             foreach (var (key, value) in *layoutWorld->RsfMap) {

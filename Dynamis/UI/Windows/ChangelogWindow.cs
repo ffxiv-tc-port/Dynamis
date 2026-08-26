@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Colors;
+using ImGuiNET;
+using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dynamis.Configuration;
@@ -45,7 +45,7 @@ public sealed partial class ChangelogWindow : Window, ISingletonWindow, IMessage
     public override void Draw()
     {
         DrawMarkAsUnread();
-        using var child = ImRaii.Child("###entries"u8);
+        using var child = ImRaii.Child("###entries");
         using var twp = new ImRaiiTextWrapPos();
         Draw0_1_4_0();
         Draw0_1_3_14();
@@ -78,7 +78,7 @@ public sealed partial class ChangelogWindow : Window, ISingletonWindow, IMessage
     private void DrawMarkAsUnread()
     {
         var markAsRead = _configuration.Configuration.ReadChangelogVersion < ChangelogVersion;
-        var label = markAsRead ? "Mark as read"u8 : "Mark as unread"u8;
+        var label = markAsRead ? "Mark as read" : "Mark as unread";
 
         ImGui.Dummy(
             new(
@@ -107,7 +107,7 @@ public sealed partial class ChangelogWindow : Window, ISingletonWindow, IMessage
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void BulletText(ReadOnlySpan<byte> text)
+    private static void BulletText(string text)
     {
         // ImGui.BulletText doesn't respect TextWrapPos.
         ImGui.Bullet();

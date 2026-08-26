@@ -1,16 +1,17 @@
-﻿using System.Reflection;
-using Dalamud.Bindings.ImGui;
+﻿using System.Numerics;
+using System.Reflection;
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
 using Dynamis.ClientStructs;
 using Dynamis.Configuration;
 using Dynamis.Interop.Ipfd;
 using Dynamis.Messaging;
-using Dynamis.Utility;
+using ImGuiNET;
 using Microsoft.Extensions.Logging;
 using static Dynamis.Utility.ChatGuiUtility;
 using static Dynamis.Utility.SeStringUtility;
@@ -28,7 +29,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
     public SettingsWindow(ConfigurationContainer configuration, ImGuiComponents imGuiComponents, IChatGui chatGui,
         MessageHub messageHub, Ipfd ipfd) : base(
-        $"Dynamis {Assembly.GetExecutingAssembly().GetName().Version} Settings###DynamisSettings",
+        "Dynamis ?? Settings".Loc(Assembly.GetExecutingAssembly().GetName().Version) + "###DynamisSettings",
         ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking
     )
     {
@@ -49,19 +50,19 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
     public override void Draw()
     {
-        if (ImGui.CollapsingHeader("Behavior"u8)) {
+        if (ImGui.CollapsingHeader("Behavior".Loc())) {
             DrawBehavior();
         }
 
-        if (ImGui.CollapsingHeader("Interface"u8)) {
+        if (ImGui.CollapsingHeader("Interface".Loc())) {
             DrawInterface();
         }
 
-        if (ImGui.CollapsingHeader("Data"u8)) {
+        if (ImGui.CollapsingHeader("Data".Loc())) {
             DrawData();
         }
 
-        if (ImGui.CollapsingHeader("Object Inspector Colors"u8)) {
+        if (ImGui.CollapsingHeader("Object Inspector Colors".Loc())) {
             DrawColors();
         }
     }
@@ -74,13 +75,13 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
         ImGui.SetNextItemWidth(inputWidth);
         var logLevel = (LogLevel)configuration.MinimumLogLevel;
-        if (ImGuiComponents.ComboEnum("Log Level", ref logLevel)) {
+        if (ImGuiComponents.ComboEnum("Log Level".Loc(), ref logLevel)) {
             configuration.MinimumLogLevel = (int)logLevel;
             _configuration.Save(nameof(configuration.MinimumLogLevel));
         }
 
         var enableIpfd = configuration.EnableIpfd;
-        if (ImGui.Checkbox("Enable IPFD (In-Process Faux Debugger)"u8, ref enableIpfd)) {
+        if (ImGui.Checkbox("Enable IPFD (In-Process Faux Debugger)".Loc(), ref enableIpfd)) {
             configuration.EnableIpfd = enableIpfd;
             _configuration.Save(nameof(configuration.EnableIpfd));
         }
@@ -90,7 +91,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
         ImGui.SameLine();
         using (ImRaii.Disabled(!_ipfd.Loaded)) {
-            if (ImGui.Button("Force Unload##ipfd"u8)) {
+            if (ImGui.Button("Force Unload".Loc() + "##ipfd")) {
                 _ipfd.Unload();
             }
         }
@@ -98,7 +99,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
         var symbolHandlerMode = configuration.SymbolHandlerMode;
         if (Util.IsWine()) {
             var enableWineSymbolHandler = symbolHandlerMode == SymbolHandlerMode.ForceInitialize;
-            if (ImGui.Checkbox("Enable Symbol Handler"u8, ref enableWineSymbolHandler)) {
+            if (ImGui.Checkbox("Enable Symbol Handler".Loc(), ref enableWineSymbolHandler)) {
                 symbolHandlerMode = enableWineSymbolHandler
                     ? SymbolHandlerMode.ForceInitialize
                     : SymbolHandlerMode.Disable;
@@ -107,7 +108,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
             }
         } else {
             if (ImGuiComponents.ComboEnum(
-                    "Symbol Handler Mode", ref symbolHandlerMode, ConfigurationEnumExtensions.Label
+                    "Symbol Handler Mode".Loc(), ref symbolHandlerMode, ConfigurationEnumExtensions.Label
                 )) {
                 configuration.SymbolHandlerMode = symbolHandlerMode;
                 _configuration.Save(nameof(configuration.SymbolHandlerMode));
@@ -124,22 +125,24 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
         if (ImGui.IsItemHovered()) {
             using var _ = ImRaii.Tooltip();
-            ImGui.TextUnformatted("This setting may cause stability issues."u8);
+            ImGui.TextUnformatted("This setting may cause stability issues.".Loc());
             ImGui.TextUnformatted(
-                $"Disabling it may then require hand-editing pluginConfigs{(Util.IsWine() ? '/' : '\\')}{_configuration.InternalName}.json."
+                "Disabling it may then require hand-editing pluginConfigs??.json.".Loc(
+                    $"{(Util.IsWine() ? '/' : '\\')}{_configuration.InternalName}"
+                )
             );
         }
     }
 
     private void DrawInterface()
     {
-        ImGuiComponents.SeparatorText("Memory Snapshots"u8);
-        using (ImRaii.PushId("###Interface_MemorySnapshots"u8)) {
+        ImGuiComponents.SeparatorText("Memory Snapshots".Loc());
+        using (ImRaii.PushId("###Interface_MemorySnapshots")) {
             DrawInterface_MemorySnapshots();
         }
 
-        ImGuiComponents.SeparatorText("Miscellaneous"u8);
-        using (ImRaii.PushId("###Interface_Miscellaneous"u8)) {
+        ImGuiComponents.SeparatorText("Miscellaneous".Loc());
+        using (ImRaii.PushId("###Interface_Miscellaneous")) {
             DrawInterface_Miscellaneous();
         }
     }
@@ -150,7 +153,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
 
         var snapshotsAnnotated = configuration.OpenSnapshotsAnnotated;
         if (ImGuiComponents.Combo(
-                "Default Display Mode", ref snapshotsAnnotated, [null, false, true,],
+                "Default Display Mode".Loc(), ref snapshotsAnnotated, [null, false, true,],
                 DescribeSnapshotsAnnotated
             )) {
             configuration.OpenSnapshotsAnnotated = snapshotsAnnotated;
@@ -161,9 +164,9 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
     private static string DescribeSnapshotsAnnotated(bool? annotated)
         => annotated switch
         {
-            null  => "Inherit Last",
-            false => "Compact",
-            true  => "Annotated",
+            null  => "Inherit Last".Loc(),
+            false => "Compact".Loc(),
+            true  => "Annotated".Loc(),
         };
 
     private void DrawInterface_Miscellaneous()
@@ -171,13 +174,13 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
         var configuration = _configuration.Configuration;
 
         var showInDevMenu = configuration.ShowInDevMenu;
-        if (ImGui.Checkbox("Show in dev menu"u8, ref showInDevMenu)) {
+        if (ImGui.Checkbox("Show in dev menu".Loc(), ref showInDevMenu)) {
             configuration.ShowInDevMenu = showInDevMenu;
             _configuration.Save(nameof(configuration.ShowInDevMenu));
         }
 
         var serious = configuration.Serious;
-        if (ImGui.Checkbox("I don't like fun."u8, ref serious)) {
+        if (ImGui.Checkbox("I don't like fun.".Loc(), ref serious)) {
             configuration.Serious = serious;
             _configuration.Save(nameof(configuration.Serious));
         }
@@ -201,9 +204,9 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
         );
         if (configuration.AutomaticDataYaml) {
             using (ImRaii.Disabled()) {
-                var dummy = "Automatically download from GitHub";
+                var dummy = "Automatically download from GitHub".Loc();
                 ImGui.InputText(
-                    "###dataYamlPathDummy"u8, ref dummy, dummy.Length + 1, ImGuiInputTextFlags.ReadOnly
+                    "###dataYamlPathDummy", ref dummy, (uint)dummy.Length + 1, ImGuiInputTextFlags.ReadOnly
                 );
             }
 
@@ -214,8 +217,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
             }
 
             if (ImGui.IsItemHovered()) {
-                using var _ = ImRaii.Tooltip();
-                ImGui.TextUnformatted("Use a local copy of the file instead"u8);
+                ImGui.TextUnformatted("Use a local copy of the file instead".Loc());
             }
         } else {
             _imGuiComponents.InputFile(
@@ -234,8 +236,7 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
             }
 
             if (ImGui.IsItemHovered()) {
-                using var _ = ImRaii.Tooltip();
-                ImGui.TextUnformatted("Automatically download the file from GitHub instead"u8);
+                ImGui.TextUnformatted("Automatically download the file from GitHub instead".Loc());
             }
         }
 
@@ -245,17 +246,16 @@ public sealed class SettingsWindow : Window, ISingletonWindow, IMessageObserver<
         }
 
         if (ImGui.IsItemHovered()) {
-            using var _ = ImRaii.Tooltip();
-            ImGui.TextUnformatted("Refresh the file"u8);
+            ImGui.TextUnformatted("Refresh the file".Loc());
         }
 
         ImGui.SameLine(0.0f, innerSpacing);
-        ImGui.TextUnformatted("ClientStructs' data.yml"u8);
+        ImGui.TextUnformatted("ClientStructs' data.yml".Loc());
 
-        DrawDisableLogCategoryCheckbox(typeof(DataYamlContainer), "Silence data.yml-related logs"u8);
+        DrawDisableLogCategoryCheckbox(typeof(DataYamlContainer), "Silence data.yml-related logs".Loc());
     }
 
-    private void DrawDisableLogCategoryCheckbox(Type type, ImU8String label)
+    private void DrawDisableLogCategoryCheckbox(Type type, string label)
     {
         var typeName = type.FullName;
         if (typeName is null) {

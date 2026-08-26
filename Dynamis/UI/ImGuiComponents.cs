@@ -1,7 +1,6 @@
 using System.Numerics;
-using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
@@ -11,6 +10,7 @@ using Dynamis.Interop.Win32;
 using Dynamis.Messaging;
 using Dynamis.UI.ObjectInspectors;
 using Dynamis.UI.Windows;
+using ImGuiNET;
 
 namespace Dynamis.UI;
 
@@ -24,9 +24,9 @@ public sealed partial class ImGuiComponents(
     Lazy<ObjectInspectorDispatcher> objectInspectorDispatcher,
     ContextMenu contextMenu) : IMessageObserver<ConfigurationChangedMessage>
 {
-    private readonly TitleBarButton _toolboxButton   = BuildToolboxButton(messageHub);
-    private readonly TitleBarButton _settingsButton  = BuildSettingsButton(messageHub);
-    private readonly TitleBarButton _changelogButton = BuildChangelogButton(messageHub, configuration);
+    private readonly Window.TitleBarButton _toolboxButton   = BuildToolboxButton(messageHub);
+    private readonly Window.TitleBarButton _settingsButton  = BuildSettingsButton(messageHub);
+    private readonly Window.TitleBarButton _changelogButton = BuildChangelogButton(messageHub, configuration);
 
     public void AddTitleBarButtons(Window window)
     {
@@ -43,7 +43,7 @@ public sealed partial class ImGuiComponents(
         }
     }
 
-    private static TitleBarButton BuildToolboxButton(MessageHub messageHub)
+    private static Window.TitleBarButton BuildToolboxButton(MessageHub messageHub)
         => new()
         {
             Icon = FontAwesomeIcon.Home,
@@ -51,12 +51,12 @@ public sealed partial class ImGuiComponents(
             ShowTooltip = () =>
             {
                 using var _ = ImRaii.Tooltip();
-                ImGui.Text("Toolbox"u8);
+                ImGui.Text("Toolbox");
             },
             Priority = 1,
         };
 
-    private static TitleBarButton BuildSettingsButton(MessageHub messageHub)
+    private static Window.TitleBarButton BuildSettingsButton(MessageHub messageHub)
         => new()
         {
             Icon = FontAwesomeIcon.Cog,
@@ -64,29 +64,24 @@ public sealed partial class ImGuiComponents(
             IconOffset = new(0, 1),
             ShowTooltip = () =>
             {
-                using var _ = ImRaii.Tooltip();
-                ImGui.Text("Settings"u8);
+                ImGui.Text("Settings");
             },
             Priority = 2,
         };
 
-    private static TitleBarButton BuildChangelogButton(MessageHub messageHub, ConfigurationContainer configuration)
+    private static Window.TitleBarButton BuildChangelogButton(MessageHub messageHub, ConfigurationContainer configuration)
         => new()
         {
             Icon = FontAwesomeIcon.Book,
             Click = _ => messageHub.Publish<OpenWindowMessage<ChangelogWindow>>(),
-            IconColor = configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion
-                ? ImGuiColors.SuccessForeground
-                : null,
             IconOffset = new(0, 1),
             ShowTooltip = () =>
             {
-                using var _ = ImRaii.Tooltip();
-                ImGui.Text("Changelog"u8);
+                ImGui.Text("Changelog");
                 if (configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion) {
                     ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
                     using var color = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.SuccessForeground);
-                    ImGui.TextUnformatted("(NEW!)"u8);
+                    ImGui.TextUnformatted("(NEW!)");
                 }
             },
             Priority = 3,
@@ -95,70 +90,53 @@ public sealed partial class ImGuiComponents(
     private const           float   SeparatorThickness = 1.0f;
     private static readonly Vector2 SeparatorTextAlign = new(0.02f, 0.5f);
 
-    public static void SeparatorText(ReadOnlySpan<byte> text, float extraW = 0.0f)
+    /// <remarks>
+    /// TC note: the original implementation used Dalamud.Bindings.ImGui's internal
+    /// <c>ImGuiP</c>/<c>ImRect</c> surface (post-api13 only) to precisely replicate Dear
+    /// ImGui's native SeparatorText layout. TC's client only has classic ImGuiNET, which
+    /// exposes no equivalent internal API, so this is a simplified reimplementation using
+    /// only public ImGuiNET calls. Visually it's "separator line, then label" instead of a
+    /// label embedded within the separator, but no caller in this repo passes a non-zero
+    /// <paramref name="extraW"/>, so the simplification doesn't affect any current usage.
+    /// </remarks>
+    public static void SeparatorText(string text, float extraW = 0.0f)
     {
         var style = ImGui.GetStyle();
         var drawList = ImGui.GetWindowDrawList();
-        var window = ImGuiP.GetCurrentWindow();
 
         var labelSize = ImGui.CalcTextSize(text);
         var pos = ImGui.GetCursorScreenPos();
         var padding = style.FramePadding;
+        var availW = ImGui.GetContentRegionAvail().X;
 
-        var minSize = new Vector2(
-            labelSize.X + extraW + padding.X * 2.0f, MathF.Max(labelSize.Y + padding.Y * 2.0f, SeparatorThickness)
-        );
-        var bb = new ImRect(
-            pos, window.WorkRect.Max with
-            {
-                Y = pos.Y + minSize.Y,
-            }
-        );
-        var textBaselineY =
-            MathF.Truncate((bb.Max.Y - bb.Min.Y - labelSize.Y) * SeparatorTextAlign.Y + 0.999f);
-        ImGuiP.ItemSize(minSize, textBaselineY);
-        if (!ImGuiP.ItemAdd(bb, 0)) {
-            return;
-        }
-
-        var sep1X1 = pos.X;
-        var sep2X2 = bb.Max.X;
-        var sepsY = MathF.Truncate((bb.Min.Y + bb.Max.Y) * 0.5f + 0.999f);
-
-        var labelAvailW = MathF.Max(0.0f, sep2X2 - sep1X1 - padding.X * 2.0f);
-        var labelPos = new Vector2(
-            pos.X + padding.X + MathF.Max(0.0f, (labelAvailW - labelSize.X - extraW) * SeparatorTextAlign.X),
-            pos.Y + textBaselineY
-        );
-
-        // This allows using SameLine() to position something in the 'extra_w'
-        window.DC.CursorPosPrevLine = window.DC.CursorPosPrevLine with
-        {
-            X = labelPos.X + labelSize.X,
-        };
-
+        var height = MathF.Max(labelSize.Y + padding.Y * 2.0f, SeparatorThickness);
+        var sepsY = pos.Y + height * 0.5f;
         var separatorCol = ImGui.GetColorU32(ImGuiCol.Separator);
+
         if (labelSize.X > 0.0f) {
-            var sep1X2 = labelPos.X - style.ItemSpacing.X;
-            var sep2X1 = labelPos.X + labelSize.X + extraW + style.ItemSpacing.X;
-            if (sep1X2 > sep1X1 && SeparatorThickness > 0.0f) {
-                drawList.AddLine(new(sep1X1, sepsY), new(sep1X2, sepsY), separatorCol, SeparatorThickness);
+            var sep1X2 = pos.X + MathF.Max(0.0f, (availW - labelSize.X - extraW) * SeparatorTextAlign.X)
+                          - style.ItemSpacing.X;
+            if (sep1X2 > pos.X && SeparatorThickness > 0.0f) {
+                drawList.AddLine(new(pos.X, sepsY), new(sep1X2, sepsY), separatorCol, SeparatorThickness);
             }
 
+            ImGui.SetCursorScreenPos(new(MathF.Max(pos.X, sep1X2 + style.ItemSpacing.X), pos.Y));
+            ImGui.TextUnformatted(text);
+
+            var labelEndX = ImGui.GetItemRectMax().X;
+            var sep2X1 = labelEndX + extraW + style.ItemSpacing.X;
+            var sep2X2 = pos.X + availW;
             if (sep2X2 > sep2X1 && SeparatorThickness > 0.0f) {
                 drawList.AddLine(new(sep2X1, sepsY), new(sep2X2, sepsY), separatorCol, SeparatorThickness);
             }
 
-            ImGuiP.RenderTextEllipsis(
-                drawList, labelPos, bb.Max + style.ItemSpacing with
-                {
-                    X = 0.0f,
-                }, bb.Max.X, bb.Max.X, text, labelSize
-            );
+            ImGui.SetCursorScreenPos(new(pos.X, pos.Y + height));
         } else {
             if (SeparatorThickness > 0.0f) {
-                drawList.AddLine(new(sep1X1, sepsY), new(sep2X2, sepsY), separatorCol, SeparatorThickness);
+                drawList.AddLine(new(pos.X, sepsY), new(pos.X + availW, sepsY), separatorCol, SeparatorThickness);
             }
+
+            ImGui.Dummy(new(availW, height));
         }
     }
 
@@ -174,7 +152,6 @@ public sealed partial class ImGuiComponents(
         }
 
         if (ImGui.IsItemHovered()) {
-            using var _ = ImRaii.Tooltip();
             using (ImRaii.PushFont(UiBuilder.MonoFont, mono)) {
                 ImGui.TextUnformatted(copyText?.Invoke() ?? text);
             }
@@ -209,7 +186,6 @@ public sealed partial class ImGuiComponents(
         }
 
         if (ImGui.IsItemHovered()) {
-            using var _ = ImRaii.Tooltip();
             ImGui.TextUnformatted("Address: ");
             ImGui.SameLine(0, 0);
             using (ImRaii.PushFont(UiBuilder.MonoFont)) {
@@ -293,7 +269,7 @@ public sealed partial class ImGuiComponents(
             if (@class.Truncated) {
                 ImGui.SameLine();
                 using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                    ImGui.TextUnformatted("(truncated)"u8);
+                    ImGui.TextUnformatted("(truncated)");
                 }
             }
         } else {
@@ -367,9 +343,8 @@ public sealed partial class ImGuiComponents(
 
     public void Update()
     {
-        _changelogButton.IconColor =
-            configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion
-                ? ImGuiColors.SuccessForeground
-                : null;
+        // TC note: TC's Dalamud has no Window.TitleBarButton.IconColor property (that's a
+        // newer Dalamud addition) - the "unread changelog" highlight is still shown via the
+        // tooltip's "(NEW!)" text (see BuildChangelogButton above), just not via icon tint.
     }
 }

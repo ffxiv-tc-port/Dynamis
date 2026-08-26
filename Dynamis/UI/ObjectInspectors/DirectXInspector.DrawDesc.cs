@@ -2,7 +2,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Dalamud.Bindings.ImGui;
+using ImGuiNET;
 using Dynamis.Utility;
 using InteropGenerator.Runtime;
 using TerraFX.Interop.DirectX;
@@ -86,11 +86,11 @@ partial class DirectXInspector
         ImGui.TextUnformatted($"Stencil Read Mask: 0x{desc.StencilReadMask:X}");
         ImGui.TextUnformatted($"Stencil Write Mask: 0x{desc.StencilWriteMask:X}");
 
-        ImGui.TextUnformatted("Front: "u8);
+        ImGui.TextUnformatted("Front: ");
         ImGui.SameLine();
         DrawDesc(in desc.FrontFace);
 
-        ImGui.TextUnformatted("Back: "u8);
+        ImGui.TextUnformatted("Back: ");
         ImGui.SameLine();
         DrawDesc(in desc.BackFace);
     }
@@ -270,11 +270,11 @@ partial class DirectXInspector
         ImGui.TextUnformatted($"Function Parameter Count: {desc.FunctionParameterCount}");
         ImGui.TextUnformatted($"Has Return: {(desc.HasReturn ? "Yes" : "No")}");
         if (desc.Has10Level9VertexShader) {
-            ImGui.TextUnformatted("Has 10 Level 9 Vertex Shader"u8);
+            ImGui.TextUnformatted("Has 10 Level 9 Vertex Shader");
         }
 
         if (desc.Has10Level9PixelShader) {
-            ImGui.TextUnformatted("Has 10 Level 9 Pixel Shader"u8);
+            ImGui.TextUnformatted("Has 10 Level 9 Pixel Shader");
         }
     }
 

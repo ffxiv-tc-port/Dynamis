@@ -1,5 +1,4 @@
 using System.Numerics;
-using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
@@ -7,7 +6,8 @@ using Dynamis.Interop;
 using Dynamis.UI.Windows;
 using Dynamis.Utility;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Kernel;
-using TerraFX.Interop.DirectX;
+using ImGuiNET;
+using SharpDX.Direct3D11;
 
 namespace Dynamis.UI.ObjectInspectors;
 
@@ -44,16 +44,16 @@ public sealed unsafe class TextureInspector(
             return;
         }
 
-        D3D11_SHADER_RESOURCE_VIEW_DESC description;
-        ((ID3D11ShaderResourceView*)pointer->D3D11ShaderResourceView)->GetDesc(&description);
-        ImGui.TextUnformatted($"Format: {description.Format} Dimension: {description.ViewDimension}");
+        using var srv = new ShaderResourceView((nint)pointer->D3D11ShaderResourceView);
+        var description = srv.Description;
+        ImGui.TextUnformatted($"Format: {description.Format} Dimension: {description.Dimension}");
     }
 
     public void DrawAdditionalTooltipDetails(Texture* pointer)
     {
         DrawAdditionalDetailsCommon(pointer, true);
         ImGui.Image(
-            new((nint)pointer->D3D11ShaderResourceView),
+            (nint)pointer->D3D11ShaderResourceView,
             new Vector2(pointer->ActualWidth, pointer->ActualHeight).Contain(new(128.0f, 128.0f)),
             Vector2.Zero,
             new Vector2(
@@ -93,7 +93,7 @@ public sealed unsafe class TextureInspector(
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Save to File"u8)) {
+        if (ImGui.Button("Save to File")) {
             var safeHandle = new SafeTextureHandle(pointer, true);
             fileDialogManager.SaveFileDialog(
                 "Save Texture", ".tex,.atex,.dds", "texture.tex", ".tex", (ok, path) =>
