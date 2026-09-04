@@ -1,43 +1,31 @@
 # Dynamis
 
-![](./Dynamis/Resources/Dynamis128.png)
+給開發者／逆向工程用的 Dalamud 開發工具箱插件。
 
-**Dynamis** is a development/reverse engineering toolbox for Dalamud, including features such as:
-- UI for various Dalamud APIs such as the signature scanner and the object table ;
-- Object inspector that will try to guess the size and type of what you're trying to look at using just a start address, with support for various types:
-  - Objects known to the [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs) project ;
-  - Other game objects ;
-  - Functions (using the disassembler shipped with Dalamud) ;
-  - Some types have special support (for example, texture objects offer a preview).
-- IPFD (In-Process Faux Debugger), a facility that enables setting breakpoints and watchpoints without a debugger:
-  - While it cannot meaningfully stop the process for inspection, it instead takes snapshots of threads that hit the breakpoints ;
-  - Not stopping the process, though, has the benefit of avoiding disconnection issues due to the game becoming unresponsive from the server's viewpoint ;
-  - Snapshots include the CPU state and the entire stack, allowing thorough analysis ;
-- Optionally, a hosted PowerShell, that can be used to interact with various facilities from FFXIVClientStructs, Lumina, Dalamud, Dynamis itself, and other plugins ;
-  - There are two "distributions" of the plugin: one includes the hosted PowerShell, the other doesn't have it compiled in at all, for people who aren't comfortable in having that running in their game process.
+## 功能
 
-Please note that while Dynamis' tools have some overlap with existing ones, it doesn't try to cover all cases, and therefore is best used in complement of other tools such as IDA/Ghidra/Binja, ReClass, x64dbg/CE, etc., rather than in these tools' stead.
+- 各項 Dalamud API 的檢視介面，例如特徵碼掃描器、物件表
+- 物件檢視器：只憑起始位址就能猜測物件的型別與大小，支援
+  FFXIVClientStructs 已知型別、其他遊戲物件、函式（內建反組譯器）；部分型別有專屬檢視方式
+  （例如材質物件可直接預覽）
+- IPFD（In-Process Faux Debugger）：不需外接除錯器即可設中斷點／監看點——不會真的暫停程序，
+  而是在命中時擷取該執行緒的快照（CPU 狀態＋完整堆疊），避免因暫停遊戲程序造成與伺服器斷線
+- 可選內嵌 PowerShell，用來操作 FFXIVClientStructs、Lumina、Dalamud、Dynamis 本身與其他插件
+  （提供含 / 不含內嵌 PowerShell 兩種發行版本）
 
-## Installing
-
-1. In `/xlsettings`, add `https://raw.githubusercontent.com/Exter-N/Dynamis/dalamondieu/repo.json` to your custom repositories ;
-2. In `/xlplugins`, install one of the distributions of the plugin ;
-3. (Optional, but strongly recommended) Check `/dynamis settings` and configure it to your liking. If you're a ClientStructs contributor, you can provide it with your own copy of [data.yml](https://github.com/aers/FFXIVClientStructs/blob/main/ida/data.yml) instead of having it automatically fetch and manage it.
-
-At a later point, if you want to extend Dynamis to better suit your own use cases, and/or contribute to it, you may then grab the source and compile it yourself to use it as a dev plugin. If you don't want to bother with compiling IPFD (which requires a Rust toolchain), you may just get the DLL from the releases/actions, and put it where the .NET project expects it.
+Dynamis 的工具與既有的逆向工程工具（IDA/Ghidra/Binja、ReClass、x64dbg/CE 等）有部分重疊，
+但設計上是搭配那些工具使用，而非取代。
 
 ## Inter-Plugin API
 
-Dynamis exposes various functions through Dalamud's IPC mechanisms.
+Dynamis 透過 Dalamud IPC 機制提供多項函式，文件在 `docs/ipc-api.md`。
 
-[You can find documentation about these functions here.](docs/ipc-api.md)
+## 內嵌 PowerShell Cmdlet
 
-## Hosted PowerShell Cmdlets
+提供操作 FFXIVClientStructs、Lumina、Dalamud 等的自訂 cmdlet，文件在 `docs/cmdlets.md`。
 
-Dynamis provides custom cmdlets in its hosted PowerShell to interact with FFXIVClientStructs, Lumina, Dalamud and others.
+## 安裝
 
-[You can find documentation about these cmdlets here.](docs/cmdlets.md)
-
-## Changelog
-
-[You can read the changelog here.](docs/changelog.md)
+在 Dalamud 設定的「自訂插件庫」加入
+`https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/repo.json`
+並啟用，選擇其中一個發行版本安裝。
