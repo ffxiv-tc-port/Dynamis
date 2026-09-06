@@ -69,16 +69,23 @@ public sealed class TextParagraph : IParagraph
 
     public void Draw(ParagraphDrawFlags flags)
     {
+        // Encode under the lock (Append/End mutate the builder from the PowerShell threads), then hand the
+        // finished buffer to ImGui outside of it. Update() only ever publishes a fresh array and nothing
+        // writes into an already published one, so the captured reference stays valid even if a concurrent
+        // Append() resets _value in the meantime.
+        byte[] value;
         lock (this) {
             Update();
-            if (flags.HasFlag(ParagraphDrawFlags.CopyOnClick)) {
-                var result = ImGuiHelpers.SeStringWrapped(_value!.AsSpan(..^1), imGuiId: new(_id));
-                if (result.Clicked) {
-                    ImGui.SetClipboardText(SeString.Parse(_value!.AsSpan(..^1)).TextValue);
-                }
-            } else {
-                ImGuiHelpers.SeStringWrapped(_value!.AsSpan(..^1));
+            value = _value!;
+        }
+
+        if (flags.HasFlag(ParagraphDrawFlags.CopyOnClick)) {
+            var result = ImGuiHelpers.SeStringWrapped(value.AsSpan(..^1), imGuiId: new(_id));
+            if (result.Clicked) {
+                ImGui.SetClipboardText(SeString.Parse(value.AsSpan(..^1)).TextValue);
             }
+        } else {
+            ImGuiHelpers.SeStringWrapped(value.AsSpan(..^1));
         }
     }
 }
