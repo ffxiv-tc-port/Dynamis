@@ -301,7 +301,12 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
         var onComplete = new Action(
             [SuppressMessage("ReSharper", "AccessToModifiedClosure")]() =>
             {
-                tcs.SetResult(prompt.Result);
+                // The prompt may already have been cancelled by the time this runs: an inline prompt stays
+                // in the output transcript and keeps being drawn, and IPrompt.Cancel() makes its Draw()
+                // report completion, so this callback fires once more after the command was aborted or the
+                // window closed. TrySetResult makes that a no-op instead of throwing
+                // InvalidOperationException on the draw thread; on the normal path it is SetResult.
+                tcs.TrySetResult(prompt.Result);
                 registration.Dispose();
                 closeRegistration.Dispose();
             }
