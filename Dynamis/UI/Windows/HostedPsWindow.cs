@@ -311,7 +311,14 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
                 closeRegistration.Dispose();
             }
         );
-        var cancel = (Action)tcs.SetCanceled + prompt.Cancel;
+        // TrySetCanceled, not SetCanceled: this delegate is registered on both the command's cancellation
+        // token and the window's close token, so aborting a command while the window is closing runs it
+        // twice, and it can also run after onComplete already completed the TCS from the draw thread.
+        // SetCanceled would then throw InvalidOperationException out of CancellationTokenSource.Cancel(),
+        // and because it sits first in the multicast chain that would also skip prompt.Cancel(). Every
+        // IPrompt.Cancel() implementation is idempotent (empty body, _finished = true, or ??=), so the
+        // second run is harmless.
+        var cancel = new Action(() => tcs.TrySetCanceled()) + prompt.Cancel;
         if (inline) {
             lock (_currentSections) {
                 var sameLine = _currentParagraph is not null;

@@ -33,6 +33,15 @@ public sealed class BreakpointWindow : IndexedWindow
     private readonly HashSet<nint>          _vmIps         = [];
     private readonly HashSet<(nint, nint?)> _vmIpsAndTypes = [];
 
+    /// <summary>
+    /// Immutable snapshot of <see cref="_vmSnapshots"/> handed to the draw thread. Guarded by
+    /// <see cref="_vmSnapshots"/>, and never mutated in place - only ever replaced with a fresh array - so a
+    /// reference read under the lock stays valid for as long as the caller needs it outside of the lock.
+    /// </summary>
+    private SnapshotRecord[] _vmSnapshotsView = [];
+
+    private bool _vmSnapshotsStale;
+
     public Breakpoint Breakpoint
         => _breakpoint;
 
@@ -85,11 +94,21 @@ public sealed class BreakpointWindow : IndexedWindow
         ImGui.Checkbox("Enable Breakpoint".Loc(), ref _vmEnable);
         ImGui.SameLine();
         ImGui.SetNextItemWidth(ImGui.CalcTextSize("mmmmm").X + ImGui.GetStyle().FramePadding.X * 2.0f + ImGui.GetStyle().ItemInnerSpacing.X * 2.0f + ImGui.GetFrameHeight() * 2.0f);
+        // Read the current value under the lock, run ImGui outside of it, then take the lock again only to
+        // write an edited value back. BreakpointHit() takes this same lock from inside the IPFD vectored
+        // exception handler, i.e. on whichever game thread tripped the hardware breakpoint - holding it
+        // across an ImGui widget stalls that thread for the whole frame, every frame the user keeps the
+        // field focused.
+        int max;
         lock (this) {
-            var max = _vmMaximum;
-            ImGui.InputInt("Maximum Hits", ref max);
-            if (ImGui.IsItemDeactivatedAfterEdit()) {
-                _vmMaximum = Math.Clamp(max, -1, ushort.MaxValue);
+            max = _vmMaximum;
+        }
+
+        ImGui.InputInt("Maximum Hits", ref max);
+        if (ImGui.IsItemDeactivatedAfterEdit()) {
+            var clamped = Math.Clamp(max, -1, ushort.MaxValue);
+            lock (this) {
+                _vmMaximum = clamped;
             }
         }
         ImGui.SameLine();
@@ -181,32 +200,47 @@ public sealed class BreakpointWindow : IndexedWindow
         ImGui.TableSetupColumn("Type of This", ImGuiTableColumnFlags.WidthStretch, 0.2f);
         ImGui.TableSetupColumn("Thread State", ImGuiTableColumnFlags.WidthStretch, 0.15f);
         ImGui.TableHeadersRow();
+        // Take the snapshot under the lock, then draw outside of it. ProcessSnapshot() takes this same lock
+        // from a thread pool worker to insert a finished record, and BreakpointHit() takes it from the IPFD
+        // vectored exception handler to rebuild the deduplication indexes - drawing the whole table inside
+        // it makes both wait on a full frame of ImGui, including DrawPointer's symbol resolution and the
+        // observer dispatch behind the Inspect button. The records are value copies of a bounded history
+        // (at most MaxSnapshotHistorySize entries), and the array is only ever replaced wholesale, so the
+        // reference taken under the lock stays valid for the rest of the frame.
+        SnapshotRecord[] records;
         lock (_vmSnapshots) {
-            var i = 0;
-            foreach (var record in _vmSnapshots) {
-                using var _ = ImRaii.PushId(i++);
+            if (_vmSnapshotsStale) {
+                _vmSnapshotsView = _vmSnapshots.ToArray();
+                _vmSnapshotsStale = false;
+            }
 
-                ImGui.TableNextColumn();
-                ImGuiComponents.DrawCopyable($"{record.Time}", false);
+            records = _vmSnapshotsView;
+        }
 
-                ImGui.TableNextColumn();
-                ImGuiComponents.DrawCopyable($"{record.ThreadId}", false);
+        var i = 0;
+        foreach (var record in records) {
+            using var _ = ImRaii.PushId(i++);
 
-                ImGui.TableNextColumn();
-                _imGuiComponents.DrawPointer(
-                    record.ExceptionAddress, null, null, flags: ImGuiComponents.DrawPointerFlags.RightAligned
-                );
+            ImGui.TableNextColumn();
+            ImGuiComponents.DrawCopyable($"{record.Time}", false);
 
-                ImGui.TableNextColumn();
-                ImGuiComponents.DrawCopyable(
-                    (record.ClassOfThis?.Name ?? string.Empty).AfterLast("::"), false,
-                    () => record.ClassOfThis?.Name ?? string.Empty
-                );
+            ImGui.TableNextColumn();
+            ImGuiComponents.DrawCopyable($"{record.ThreadId}", false);
 
-                ImGui.TableNextColumn();
-                if (ImGui.Button("Inspect".Loc())) {
-                    _messageHub.Publish(new InspectObjectMessage(record.Context));
-                }
+            ImGui.TableNextColumn();
+            _imGuiComponents.DrawPointer(
+                record.ExceptionAddress, null, null, flags: ImGuiComponents.DrawPointerFlags.RightAligned
+            );
+
+            ImGui.TableNextColumn();
+            ImGuiComponents.DrawCopyable(
+                (record.ClassOfThis?.Name ?? string.Empty).AfterLast("::"), false,
+                () => record.ClassOfThis?.Name ?? string.Empty
+            );
+
+            ImGui.TableNextColumn();
+            if (ImGui.Button("Inspect".Loc())) {
+                _messageHub.Publish(new InspectObjectMessage(record.Context));
             }
         }
     }
@@ -272,21 +306,32 @@ public sealed class BreakpointWindow : IndexedWindow
             return;
         }
 
-        int maximum;
+        int  maximum;
+        bool disable;
         lock (this) {
             maximum = _vmMaximum;
             if (_vmMaximum > 0) {
                 _vmMaximum--;
             }
 
-            if (maximum == 1) {
-                _vmSyncTask = _breakpoint.DisableAsync();
-            }
+            disable = maximum == 1;
+        }
+
+        // Outside the lock: DisableAsync() takes the breakpoint's own lock and calls into the native IPFD
+        // module, while DrawBreakpointEditor() waits on this lock from the draw thread. maximum == 1 and
+        // maximum == 0 are mutually exclusive, so pulling the call out does not reorder it against the
+        // early return below.
+        if (disable) {
+            _vmSyncTask = _breakpoint.DisableAsync();
         }
 
         if (maximum == 0) {
             if (!isIpDuplicate || !isIpAndTypeDuplicate) {
-                RebuildIndexes();
+                // RebuildIndexes() walks _vmSnapshots, which ProcessSnapshot() mutates from a thread pool
+                // worker - this call site used to run without that lock held.
+                lock (_vmSnapshots) {
+                    RebuildIndexes();
+                }
             }
 
             return;
@@ -316,9 +361,16 @@ public sealed class BreakpointWindow : IndexedWindow
                 _vmSnapshots.RemoveAt(_vmSnapshots.Count - 1);
                 RebuildIndexes();
             }
+
+            _vmSnapshotsStale = true;
         }
     }
 
+    /// <summary>
+    /// Rebuilds the deduplication indexes from <see cref="_vmSnapshots"/>. The caller must hold the
+    /// <see cref="_vmSnapshots"/> lock - this walks the list, and <see cref="ProcessSnapshot"/> inserts into
+    /// it from a thread pool worker. Nesting is always _vmSnapshots then _vmIps, never the other way round.
+    /// </summary>
     private void RebuildIndexes()
     {
         lock (_vmIps) {
