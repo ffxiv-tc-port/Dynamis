@@ -289,16 +289,21 @@ public sealed class BreakpointWindow : IndexedWindow
             ? *(nint*)@this
             : null;
 
-        bool isIpDuplicate, isIpAndTypeDuplicate;
+        // HashSet<T>.Add() returns true when the entry was *newly added*, i.e. when this is the first hit
+        // at that address - so these mean "new", not "duplicate", and the deduplication test has to negate
+        // them. Upstream (9c8e837, still current on upstream/main at 0.1.4.2) named them isIpDuplicate /
+        // isIpAndTypeDuplicate and used them unnegated, which made "Deduplicate: By Address" throw away the
+        // first hit at each address and keep every repeat - exactly backwards.
+        bool isIpNew, isIpAndTypeNew;
         lock (_vmIps) {
-            isIpDuplicate = _vmIps.Add(e.Address);
-            isIpAndTypeDuplicate = _vmIpsAndTypes.Add((e.Address, typeOfThis));
+            isIpNew = _vmIps.Add(e.Address);
+            isIpAndTypeNew = _vmIpsAndTypes.Add((e.Address, typeOfThis));
         }
 
         var isDuplicate = _vmDeduplication switch
         {
-            DeduplicationMode.ByInstructionPointer              => isIpDuplicate,
-            DeduplicationMode.ByInstructionPointerAndTypeOfThis => isIpAndTypeDuplicate,
+            DeduplicationMode.ByInstructionPointer              => !isIpNew,
+            DeduplicationMode.ByInstructionPointerAndTypeOfThis => !isIpAndTypeNew,
             _                                                   => false,
         };
 
@@ -326,9 +331,14 @@ public sealed class BreakpointWindow : IndexedWindow
         }
 
         if (maximum == 0) {
-            if (!isIpDuplicate || !isIpAndTypeDuplicate) {
-                // RebuildIndexes() walks _vmSnapshots, which ProcessSnapshot() mutates from a thread pool
-                // worker - this call site used to run without that lock held.
+            // The hit budget is used up, so this hit is dropped instead of recorded - which leaves whatever
+            // the Add() calls above just inserted pointing at a snapshot that will never exist. Rebuild the
+            // indexes from _vmSnapshots to drop those entries again. The old condition was
+            // `!isIpDuplicate || !isIpAndTypeDuplicate`, i.e. it rebuilt precisely when nothing had been
+            // inserted and skipped the rebuild when something had.
+            // RebuildIndexes() walks _vmSnapshots, which ProcessSnapshot() mutates from a thread pool
+            // worker, so it needs that lock held; this call site used to run without it.
+            if (isIpNew || isIpAndTypeNew) {
                 lock (_vmSnapshots) {
                     RebuildIndexes();
                 }
