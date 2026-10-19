@@ -20,7 +20,7 @@ public sealed unsafe class ConstantBufferInspector(ImGuiComponents imGuiComponen
             return;
         }
 
-        ImGui.TextUnformatted("Constant Buffer Contents: ");
+        ImGui.TextUnformatted("Constant Buffer Contents: ".Loc());
         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
         imGuiComponents.DrawPointer(
             (nint)sourcePtr,

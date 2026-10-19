@@ -2,12 +2,11 @@
 using System.Reflection;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dynamis.Configuration;
 using Dynamis.Messaging;
-using Dynamis.Utility;
 
 namespace Dynamis.UI.Windows;
 
@@ -23,7 +22,7 @@ public sealed class ToolboxWindow : Window, ISingletonWindow, IMessageObserver<C
     public ToolboxWindow(IUiBuilder uiBuilder, MessageHub messageHub, Toolbox toolbox,
         ConfigurationContainer configuration, ImGuiComponents imGuiComponents)
         : base(
-            $"Dynamis {Assembly.GetExecutingAssembly().GetName().Version} Toolbox###DynamisToolbox",
+            "Dynamis ?? Toolbox".Loc(Assembly.GetExecutingAssembly().GetName().Version) + "###DynamisToolbox",
             ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking
         )
     {
@@ -43,7 +42,7 @@ public sealed class ToolboxWindow : Window, ISingletonWindow, IMessageObserver<C
         _toolbox.Draw(this);
 
         ImGui.Dummy(new(16.0f, ImGui.GetContentRegionAvail().Y - ImGui.GetFrameHeightWithSpacing()));
-        if (ImGui.Button("Dalamud Console / Log window"u8, new(ImGui.GetContentRegionAvail().X, -1.0f))) {
+        if (ImGui.Button("Dalamud Console / Log window".Loc(), new(ImGui.GetContentRegionAvail().X, -1.0f))) {
             _messageHub.Publish<OpenDalamudConsoleMessage>();
         }
 
@@ -80,7 +79,7 @@ public sealed class ToolboxWindow : Window, ISingletonWindow, IMessageObserver<C
     void Toolbox.IView.Begin()
         => _startOfSection = true;
 
-    bool Toolbox.IView.Item(ReadOnlySpan<byte> label)
+    bool Toolbox.IView.Item(string label)
     {
         if (_startOfSection) {
             _startOfSection = false;

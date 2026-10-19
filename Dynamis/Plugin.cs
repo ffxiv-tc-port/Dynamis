@@ -1,4 +1,5 @@
-﻿using Dalamud.Interface.ImGuiFileDialog;
+﻿using Dalamud.Game;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
@@ -32,9 +33,20 @@ public sealed class Plugin : IDalamudPlugin
 
     public static IPluginLog? Log { get; private set; }
 
-    public Plugin(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog)
+    // TC note: constructor-parameter injection is intentional here, not a stray revert of upstream's
+    // "Simplify Dalamud service instantiation" commit: TC's Dalamud has no
+    // IDalamudPluginInterface.GetRequiredService<T>(), and IDalamudPluginInterface.Create<T>() throws for Dalamud's own
+    // service interfaces, which faults the whole host silently (RunAsync() is only observed in Dispose()),
+    // so none of the IHostedServices - including the one registering /dynamis - would start.
+    public Plugin(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog,
+        ITextureProvider textureProvider, ITextureReadbackProvider readbackProvider,
+        ICommandManager commandManager, IChatGui chatGui, IDtrBar dtrBar, ISigScanner sigScanner,
+        IGameInteropProvider gameInteropProvider, ITitleScreenMenu titleScreenMenu,
+        INotificationManager notificationManager, IFramework framework, IObjectTable objectTable,
+        IDataManager dataManager)
     {
         Log = pluginLog;
+        Localization.Init(pluginInterface.AssemblyLocation.DirectoryName);
 
         _hostBuilderRunTask =
             new HostBuilder()
@@ -52,10 +64,20 @@ public sealed class Plugin : IDalamudPlugin
                     {
                         collection.AddSingleton(pluginInterface);
                         collection.AddSingleton(pluginLog);
+                        collection.AddSingleton(textureProvider);
+                        collection.AddSingleton(readbackProvider);
+                        collection.AddSingleton(commandManager);
+                        collection.AddSingleton(chatGui);
+                        collection.AddSingleton(dtrBar);
+                        collection.AddSingleton(sigScanner);
+                        collection.AddSingleton(gameInteropProvider);
+                        collection.AddSingleton(titleScreenMenu);
+                        collection.AddSingleton(notificationManager);
+                        collection.AddSingleton(framework);
+                        collection.AddSingleton(objectTable);
+                        collection.AddSingleton(dataManager);
 
                         collection.AddSingleton(pluginInterface.UiBuilder);
-
-                        collection.AddDalamudServices();
 
                         collection.AddSingleton(new Dalamud.Localization("Dynamis.Localization.", "", useEmbedded: true));
                         collection.AddSingleton(new WindowSystem("Dynamis"));
@@ -132,6 +154,13 @@ public sealed class Plugin : IDalamudPlugin
     {
         _pluginCts.Cancel();
         _pluginCts.Dispose();
-        _hostBuilderRunTask.Wait();
+
+        // The generic host already applies its own default ~5s shutdown timeout to well-behaved
+        // IHostedService implementations, but that's only cooperative - a hosted service (e.g.
+        // the PowerShell host under WITH_SMA) that ignores its cancellation token could still
+        // hang here indefinitely. Back it with a hard bound so plugin unload can't freeze the
+        // game outright.
+        if (!_hostBuilderRunTask.Wait(TimeSpan.FromSeconds(10)))
+            Log?.Warning("Timed out waiting for Dynamis host to shut down; continuing unload anyway");
     }
 }

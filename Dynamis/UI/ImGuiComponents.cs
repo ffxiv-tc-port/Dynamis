@@ -1,7 +1,7 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
@@ -24,9 +24,9 @@ public sealed partial class ImGuiComponents(
     Lazy<ObjectInspectorDispatcher> objectInspectorDispatcher,
     ContextMenu contextMenu) : IMessageObserver<ConfigurationChangedMessage>
 {
-    private readonly TitleBarButton _toolboxButton   = BuildToolboxButton(messageHub);
-    private readonly TitleBarButton _settingsButton  = BuildSettingsButton(messageHub);
-    private readonly TitleBarButton _changelogButton = BuildChangelogButton(messageHub, configuration);
+    private readonly Window.TitleBarButton _toolboxButton   = BuildToolboxButton(messageHub);
+    private readonly Window.TitleBarButton _settingsButton  = BuildSettingsButton(messageHub);
+    private readonly Window.TitleBarButton _changelogButton = BuildChangelogButton(messageHub, configuration);
 
     public void AddTitleBarButtons(Window window)
     {
@@ -43,7 +43,7 @@ public sealed partial class ImGuiComponents(
         }
     }
 
-    private static TitleBarButton BuildToolboxButton(MessageHub messageHub)
+    private static Window.TitleBarButton BuildToolboxButton(MessageHub messageHub)
         => new()
         {
             Icon = FontAwesomeIcon.Home,
@@ -51,12 +51,12 @@ public sealed partial class ImGuiComponents(
             ShowTooltip = () =>
             {
                 using var _ = ImRaii.Tooltip();
-                ImGui.Text("Toolbox"u8);
+                ImGui.Text("Toolbox".Loc());
             },
             Priority = 1,
         };
 
-    private static TitleBarButton BuildSettingsButton(MessageHub messageHub)
+    private static Window.TitleBarButton BuildSettingsButton(MessageHub messageHub)
         => new()
         {
             Icon = FontAwesomeIcon.Cog,
@@ -64,29 +64,24 @@ public sealed partial class ImGuiComponents(
             IconOffset = new(0, 1),
             ShowTooltip = () =>
             {
-                using var _ = ImRaii.Tooltip();
-                ImGui.Text("Settings"u8);
+                ImGui.Text("Settings".Loc());
             },
             Priority = 2,
         };
 
-    private static TitleBarButton BuildChangelogButton(MessageHub messageHub, ConfigurationContainer configuration)
+    private static Window.TitleBarButton BuildChangelogButton(MessageHub messageHub, ConfigurationContainer configuration)
         => new()
         {
             Icon = FontAwesomeIcon.Book,
             Click = _ => messageHub.Publish<OpenWindowMessage<ChangelogWindow>>(),
-            IconColor = configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion
-                ? ImGuiColors.SuccessForeground
-                : null,
             IconOffset = new(0, 1),
             ShowTooltip = () =>
             {
-                using var _ = ImRaii.Tooltip();
-                ImGui.Text("Changelog"u8);
+                ImGui.Text("Changelog".Loc());
                 if (configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion) {
                     ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
                     using var color = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.SuccessForeground);
-                    ImGui.TextUnformatted("(NEW!)"u8);
+                    ImGui.TextUnformatted("(NEW!)".Loc());
                 }
             },
             Priority = 3,
@@ -95,7 +90,7 @@ public sealed partial class ImGuiComponents(
     private const           float   SeparatorThickness = 1.0f;
     private static readonly Vector2 SeparatorTextAlign = new(0.02f, 0.5f);
 
-    public static void SeparatorText(ReadOnlySpan<byte> text, float extraW = 0.0f)
+    public static void SeparatorText(ImU8String text, float extraW = 0.0f)
     {
         var style = ImGui.GetStyle();
         var drawList = ImGui.GetWindowDrawList();
@@ -174,13 +169,12 @@ public sealed partial class ImGuiComponents(
         }
 
         if (ImGui.IsItemHovered()) {
-            using var _ = ImRaii.Tooltip();
             using (ImRaii.PushFont(UiBuilder.MonoFont, mono)) {
                 ImGui.TextUnformatted(copyText?.Invoke() ?? text);
             }
 
             ImGui.Separator();
-            ImGui.TextUnformatted("Click to copy to clipboard.");
+            ImGui.TextUnformatted("Click to copy to clipboard.".Loc());
         }
     }
 
@@ -209,8 +203,7 @@ public sealed partial class ImGuiComponents(
         }
 
         if (ImGui.IsItemHovered()) {
-            using var _ = ImRaii.Tooltip();
-            ImGui.TextUnformatted("Address: ");
+            ImGui.TextUnformatted("Address: ".Loc());
             ImGui.SameLine(0, 0);
             using (ImRaii.PushFont(UiBuilder.MonoFont)) {
                 ImGui.TextUnformatted(pointer.ToString("X"));
@@ -222,7 +215,7 @@ public sealed partial class ImGuiComponents(
             }
 
             ImGui.Separator();
-            ImGui.TextUnformatted("Click for options.");
+            ImGui.TextUnformatted("Click for options.".Loc());
         }
     }
 
@@ -259,7 +252,7 @@ public sealed partial class ImGuiComponents(
     {
         var protect = VirtualMemory.GetProtection(pointer);
         if (protect.CanExecute()) {
-            ImGui.TextUnformatted("Function pointer");
+            ImGui.TextUnformatted("Function pointer".Loc());
         }
 
         var wellKnown = addressIdentifier.Identify(pointer);
@@ -293,7 +286,7 @@ public sealed partial class ImGuiComponents(
             if (@class.Truncated) {
                 ImGui.SameLine();
                 using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.ErrorForeground)) {
-                    ImGui.TextUnformatted("(truncated)"u8);
+                    ImGui.TextUnformatted("(truncated)".Loc());
                 }
             }
         } else {
@@ -329,7 +322,7 @@ public sealed partial class ImGuiComponents(
         public bool Draw()
         {
             var ret = false;
-            if (messageHub is not null && pointer != 0 && ImGui.Selectable("Inspect object")) {
+            if (messageHub is not null && pointer != 0 && ImGui.Selectable("Inspect object".Loc())) {
                 messageHub.Publish(new InspectObjectMessage(pointer, @class?.Invoke(), null, name?.Invoke()));
                 ret = true;
             }
@@ -367,9 +360,8 @@ public sealed partial class ImGuiComponents(
 
     public void Update()
     {
-        _changelogButton.IconColor =
-            configuration.Configuration.ReadChangelogVersion < ChangelogWindow.ChangelogVersion
-                ? ImGuiColors.SuccessForeground
-                : null;
+        // TC note: TC's Dalamud has no Window.TitleBarButton.IconColor property (that's a
+        // newer Dalamud addition) - the "unread changelog" highlight is still shown via the
+        // tooltip's "(NEW!)" text (see BuildChangelogButton above), just not via icon tint.
     }
 }

@@ -62,7 +62,9 @@ public sealed class PointerInput(PointerParser pointerParser, ImGuiComponents im
         if (!ImGui.IsItemActive() && SubText is not null) {
             Vector2 mainTextSize;
             using (ImRaii.PushFont(UiBuilder.MonoFont)) {
-                mainTextSize = ImGui.CalcTextSize(_buffer.AsSpan().BeforeNull());
+                mainTextSize = ImGui.CalcTextSize(
+                    System.Text.Encoding.UTF8.GetString(((ReadOnlySpan<byte>)_buffer).BeforeNull())
+                );
             }
 
             ImGuiComponents.AddInputSubText(mainTextSize.X, SubText);

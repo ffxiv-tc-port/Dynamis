@@ -6,7 +6,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
+using Dynamis.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -14,7 +14,6 @@ using Dynamis.PsHost;
 using Dynamis.UI.PsHost;
 using Dynamis.UI.PsHost.Input;
 using Dynamis.UI.PsHost.Output;
-using Dynamis.Utility;
 using Microsoft.Extensions.Logging;
 using static Dynamis.Utility.SeStringUtility;
 
@@ -34,6 +33,15 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
     private          bool             _autoScroll  = true;
     private          bool             _copyOnClick = false;
 
+    /// <summary>
+    /// Immutable snapshot of <see cref="_output"/> handed to the draw thread. Guarded by
+    /// <see cref="_output"/>, and never mutated in place - only ever replaced with a fresh array - so a
+    /// reference read under the lock stays valid for as long as the caller needs it outside of the lock.
+    /// </summary>
+    private IParagraph[] _outputSnapshot = [];
+
+    private bool _outputSnapshotStale;
+
     private readonly Stack<Section> _currentSections = [];
     private          TextParagraph? _currentParagraph;
 
@@ -50,7 +58,7 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
 
     public HostedPsWindow(ILogger logger, WindowSystem windowSystem, BootHelper bootHelper,
         IDalamudPluginInterface pi, IServiceProvider serviceProvider, ImGuiComponents imGuiComponents,
-        int index) : base($"Dynamis - Hosted PowerShell##{index}", windowSystem, index, 0)
+        int index) : base($"{"Dynamis - Hosted PowerShell".Loc()}##{index}", windowSystem, index, 0)
     {
         _logger = logger;
         _bootHelper = bootHelper;
@@ -111,6 +119,7 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
                 );
                 lock (_output) {
                     _output.Add(exitCodeParagraph);
+                    _outputSnapshotStale = true;
                 }
             } finally {
                 runspacePool.Close();
@@ -176,6 +185,7 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
             lock (_output) {
                 section = new(title, _output.Count, false);
                 _output.Add(section);
+                _outputSnapshotStale = true;
             }
 
             _currentSections.Clear();
@@ -291,12 +301,22 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
         var onComplete = new Action(
             [SuppressMessage("ReSharper", "AccessToModifiedClosure")]() =>
             {
-                tcs.SetResult(prompt.Result);
+                // The prompt may already have been cancelled by the time this runs: an inline prompt stays
+                // in the output transcript and keeps being drawn, and IPrompt.Cancel() makes its Draw()
+                // report completion, so this callback fires once more after the command was aborted or the
+                // window closed. TrySetResult makes that a no-op instead of throwing
+                // InvalidOperationException on the draw thread; on the normal path it is SetResult.
+                tcs.TrySetResult(prompt.Result);
                 registration.Dispose();
                 closeRegistration.Dispose();
             }
         );
-        var cancel = (Action)tcs.SetCanceled + prompt.Cancel;
+        // TrySetCanceled, not SetCanceled: this delegate is registered on both the command's cancellation
+        // token and the window's close token, so aborting a command while the window is closing runs it
+        // twice, and it can also run after onComplete already completed the TCS from the draw thread.
+        // SetCanceled would then throw InvalidOperationException out of CancellationTokenSource.Cancel(),
+        // and because it sits first in the multicast chain that would also skip prompt.Cancel() (which is idempotent).
+        var cancel = new Action(() => tcs.TrySetCanceled()) + prompt.Cancel;
         if (inline) {
             lock (_currentSections) {
                 var sameLine = _currentParagraph is not null;
@@ -338,16 +358,24 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
     {
         DrawToolbar();
         using var _ = ImRaii.PushFont(UiBuilder.MonoFont);
-        lock (_activePrompts) {
-            var size = ImGui.GetContentRegionAvail();
-            size.Y -= MeasureInputHeightNoLock();
-            DrawOutput(size);
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.ChildWindows) && ImGui.GetIO().MouseWheel > 0.0f) {
-                _autoScroll = false;
-            }
 
-            DrawInputNoLock();
+        // Snapshot the queued prompts under the lock and run every ImGui call outside of it. The PowerShell
+        // threads take this same lock to queue a prompt, and drawing a prompt can take arbitrarily long:
+        // CommandPrompt's tab completion runs a pipeline in the runspace pool, and a pool worker may answer
+        // it by asking the host for another prompt, i.e. by taking this very lock.
+        (IPrompt Prompt, Action OnComplete)[] prompts;
+        lock (_activePrompts) {
+            prompts = _activePrompts.ToArray();
         }
+
+        var size = ImGui.GetContentRegionAvail();
+        size.Y -= MeasureInputHeight(prompts);
+        DrawOutput(size);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.ChildWindows) && ImGui.GetIO().MouseWheel > 0.0f) {
+            _autoScroll = false;
+        }
+
+        DrawInput(prompts);
     }
 
     private void DrawToolbar()
@@ -380,22 +408,24 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
                     } else {
                         _output.Clear();
                     }
+
+                    _outputSnapshotStale = true;
                 }
             }
         }
 
         ImGui.SameLine();
-        ImGui.Checkbox("Copy mode", ref _copyOnClick);
+        ImGui.Checkbox("Copy mode".Loc(), ref _copyOnClick);
         ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
         ImGuiComponents.NormalizedIcon(FontAwesomeIcon.InfoCircle, ImGuiColors.InfoForeground.ToUInt32());
 
         if (ImGui.IsItemHovered()) {
             using var _ = ImRaii.Tooltip();
-            ImGui.TextUnformatted("Click an output line to copy it (as plain text) to your clipboard.");
+            ImGui.TextUnformatted("Click an output line to copy it (as plain text) to your clipboard.".Loc());
         }
 
         ImGui.SameLine();
-        ImGui.Checkbox("Automatically scroll to latest output", ref _autoScroll);
+        ImGui.Checkbox("Automatically scroll to latest output".Loc(), ref _autoScroll);
     }
 
     private void DrawOutput(Vector2 size)
@@ -410,10 +440,20 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
             flags |= ParagraphDrawFlags.CopyOnClick;
         }
 
+        // Same shape as Section.DrawChildren: rebuild the snapshot under the lock when it went stale,
+        // carry only the array reference out, and draw with no lock held.
+        IParagraph[] output;
         lock (_output) {
-            foreach (var section in _output) {
-                section.Draw(flags);
+            if (_outputSnapshotStale) {
+                _outputSnapshot = _output.ToArray();
+                _outputSnapshotStale = false;
             }
+
+            output = _outputSnapshot;
+        }
+
+        foreach (var section in output) {
+            section.Draw(flags);
         }
 
         if (_scrollToBottom && _autoScroll) {
@@ -423,12 +463,12 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
         _scrollToBottom = false;
     }
 
-    private float MeasureInputHeightNoLock()
+    private static float MeasureInputHeight(ReadOnlySpan<(IPrompt Prompt, Action OnComplete)> prompts)
     {
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var height = 0.0f;
-        foreach (var (prompt, _) in _activePrompts) {
-            var promptHeight = prompt.Height;
+        foreach (var entry in prompts) {
+            var promptHeight = entry.Prompt.Height;
             if (promptHeight > 0.0f) {
                 height += promptHeight + spacing;
             }
@@ -437,14 +477,22 @@ public sealed class HostedPsWindow : IndexedWindow, IDisposable
         return height;
     }
 
-    private void DrawInputNoLock()
+    private void DrawInput(ReadOnlySpan<(IPrompt Prompt, Action OnComplete)> prompts)
     {
-        for (var i = 0; i < _activePrompts.Count; ++i) {
-            var (prompt, onComplete) = _activePrompts[i];
-            if (prompt.Draw(ref _focusPrompts)) {
-                _activePrompts.RemoveAt(i);
-                --i;
-                onComplete();
+        foreach (var entry in prompts) {
+            if (!entry.Prompt.Draw(ref _focusPrompts)) {
+                continue;
+            }
+
+            // Only whoever actually takes the entry out of the list runs its completion, so a prompt that
+            // was cancelled while this frame was drawing is not completed a second time.
+            bool removed;
+            lock (_activePrompts) {
+                removed = _activePrompts.Remove(entry);
+            }
+
+            if (removed) {
+                entry.OnComplete();
             }
         }
     }

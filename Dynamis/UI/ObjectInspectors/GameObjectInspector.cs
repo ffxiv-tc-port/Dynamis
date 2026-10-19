@@ -21,7 +21,7 @@ public sealed unsafe class GameObjectInspector(ImGuiComponents imGuiComponents) 
 
         var drawObject = pointer->GetDrawObject();
         if (drawObject is not null) {
-            ImGui.TextUnformatted("Draw Object: ");
+            ImGui.TextUnformatted("Draw Object: ".Loc());
             ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
             var name = pointer->NameString;
             imGuiComponents.DrawPointer((nint)drawObject, null, () => $"Draw object of {name}");

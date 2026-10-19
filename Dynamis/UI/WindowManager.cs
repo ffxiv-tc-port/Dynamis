@@ -32,7 +32,8 @@ public sealed class WindowManager(
         uiBuilder.Draw += Draw;
         uiBuilder.OpenMainUi += OpenMainUi;
         uiBuilder.OpenConfigUi += OpenConfigUi;
-        uiBuilder.DefaultStyleChanged += DefaultStyleChanged;
+        // TC note: IUiBuilder.DefaultStyleChanged is deliberately not subscribed - the handler only
+        // forwards to ImGuiComponents.Update(), which is a no-op in this fork (see its TC note).
 
         foreach (var window in windows) {
             windowSystem.AddWindow(window.Value);
@@ -48,7 +49,6 @@ public sealed class WindowManager(
         }
 
         windowSystem.RemoveAllWindows();
-        uiBuilder.DefaultStyleChanged -= DefaultStyleChanged;
         uiBuilder.OpenConfigUi -= OpenConfigUi;
         uiBuilder.OpenMainUi -= OpenMainUi;
         uiBuilder.Draw -= Draw;

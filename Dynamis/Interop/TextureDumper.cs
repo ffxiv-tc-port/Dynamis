@@ -21,10 +21,16 @@ public sealed class TextureDumper(ITextureReadbackProvider readbackProvider)
             );
     }
 
+    // TC note: TC's Dalamud's ITextureReadbackProvider only exposes GetRawImageAsync (a single top mip,
+    // single array slice); upstream's batch GetAllRawImagesAsync(wrap, leaveOpen, ct) does not exist here,
+    // so multi-mip/multi-array-slice export isn't reproducible. This dumps just the single image Dalamud
+    // gives us (mipLevels = 1, images = [that one image]) rather than dropping "Save to File" entirely.
     public async Task SaveToFileAsync(SafeTextureHandle texture, string path,
         CancellationToken cancellationToken = default)
     {
-        var (mipLevels, images) = await readbackProvider.GetAllRawImagesAsync(texture, true, cancellationToken);
+        var image = await readbackProvider.GetRawImageAsync(texture, cancellationToken: cancellationToken);
+        var images = new[] { image, };
+        const int mipLevels = 1;
         await using var outputStream = File.Create(path);
         if (Path.GetExtension(path).ToLowerInvariant() is ".tex" or ".atex") {
             await SaveAsTexAsync(outputStream, mipLevels, images);

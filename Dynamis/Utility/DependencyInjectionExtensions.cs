@@ -1,4 +1,5 @@
 using System.Reflection;
+using Dalamud.Game;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -72,17 +73,11 @@ internal static class DependencyInjectionExtensions
         }
     }
 
-    public static void AddDalamudServices(this IServiceCollection collection)
-    {
-        var iType = typeof(IDalamudService);
-        foreach (var type in iType.Assembly.ExportedTypes.Where(iType.IsAssignableFrom)) {
-            if (collection.All(t => t.ServiceType != type)) {
-                collection.AddSingleton(
-                    type, provider => provider.GetRequiredService<IDalamudPluginInterface>().GetRequiredService(type)
-                );
-            }
-        }
-    }
+    // TC note: there is deliberately no AddDalamudServices() here. TC's Dalamud has no
+    // `IDalamudPluginInterface.GetRequiredService<T>()`, and `IDalamudPluginInterface.Create<T>()` cannot hand back
+    // Dalamud's own service interfaces (it only fills a plugin-defined class's `[PluginService]` properties).
+    // `Plugin`'s constructor takes each service as a normal constructor parameter and registers the
+    // already-resolved instance with `collection.AddSingleton(...)` instead.
 
     private static Func<IServiceProvider, T> MakeServiceFactory<T>(Type t) where T : notnull
         => (Func<IServiceProvider, T>)typeof(DependencyInjectionExtensions).GetMethod(nameof(ServiceFactory), BindingFlags.NonPublic | BindingFlags.Static)!
@@ -100,10 +95,21 @@ internal static class DependencyInjectionExtensions
     private static Lazy<TService> LazyServiceFactory<TService, TImplementation>(IServiceProvider provider) where TService : notnull where TImplementation : TService
         => new(() => provider.GetRequiredService<TImplementation>());
 
-    private sealed class SingletonWindowOpener<T>(T window) : IMessageObserver<OpenWindowMessage<T>> where T : Window, ISingletonWindow
+    private sealed class SingletonWindowOpener<T>(T window) : IMessageObserver<OpenWindowMessage<T>>, IMessageObserver<ToggleWindowMessage<T>> where T : Window, ISingletonWindow
     {
         public void HandleMessage(OpenWindowMessage<T> _)
         {
+            window.IsOpen = true;
+            window.BringToFront();
+        }
+
+        public void HandleMessage(ToggleWindowMessage<T> _)
+        {
+            if (window.IsOpen) {
+                window.IsOpen = false;
+                return;
+            }
+
             window.IsOpen = true;
             window.BringToFront();
         }

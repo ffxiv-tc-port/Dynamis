@@ -3,9 +3,8 @@ using System.Collections.ObjectModel;
 using System.Management.Automation.Host;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Colors;
-using Dalamud.Interface.Utility.Raii;
 using Dynamis.Utility;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Dynamis.UI.PsHost.Input;
 
@@ -52,7 +51,7 @@ public sealed class MultipleChoicePrompt(
             }
         }
 
-        return ImGui.Button("Submit");
+        return ImGui.Button("Submit".Loc());
     }
 
     public override void Cancel()

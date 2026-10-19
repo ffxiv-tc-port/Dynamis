@@ -28,6 +28,9 @@ public sealed unsafe partial class IpfdModule : IDisposable
     private readonly delegate* unmanaged<int>                         _syncFn;
     private readonly delegate* unmanaged<int>                         _userSyncFn;
 
+    // True only between a successful ipfd_initialize and the matching ipfd_terminate.
+    private bool _initialized;
+
     public event EventHandler<BreakpointEventArgs>? Breakpoint;
 
     public IpfdModule(ResourceProvider resourceProvider, ILogger logger)
@@ -64,6 +67,7 @@ public sealed unsafe partial class IpfdModule : IDisposable
         _userSyncFn = (delegate* unmanaged<int>)_ipfdLibrary.GetProcAddress("ipfd_user_sync");
 
         Marshal.ThrowExceptionForHR(initializeFn());
+        _initialized = true;
         Marshal.ThrowExceptionForHR(setBreakpointCallbackFn(Marshal.GetFunctionPointerForDelegate(_breakpointHandler)));
         _logger.LogInformation("Loaded IPFD module");
     }
@@ -198,9 +202,24 @@ public sealed unsafe partial class IpfdModule : IDisposable
 
     private void Dispose(bool disposing)
     {
+        // A constructor that threw part-way is still finalized; the library must not be terminated
+        // (or even called) unless it was initialized.
+        if (!_initialized) {
+            _ipfdLibrary?.Dispose();
+            return;
+        }
+
+        _initialized = false;
         _logger.LogInformation("Unloading IPFD module");
 
-        Marshal.ThrowExceptionForHR(_terminateFn());
+        var result = _terminateFn();
+        if (result < 0 && !disposing) {
+            // An exception on the finalizer thread would end the whole process.
+            _logger.LogError("IPFD module failed to terminate (HRESULT 0x{Result:X8})", result);
+            return;
+        }
+
+        Marshal.ThrowExceptionForHR(result);
         _ipfdLibrary.Dispose();
 
         _logger.LogInformation("Unloaded IPFD module");

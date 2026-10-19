@@ -14,7 +14,7 @@ public unsafe class SafeTextureHandle : SafeHandle, IDalamudTextureWrap
         => handle == 0;
 
     public ImTextureID Handle
-        => new(Texture->D3D11ShaderResourceView);
+        => new((nint)Texture->D3D11ShaderResourceView);
 
     public int Width
         => (int)Texture->AllocatedWidth;

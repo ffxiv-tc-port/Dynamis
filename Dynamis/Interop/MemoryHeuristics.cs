@@ -8,16 +8,27 @@ public sealed class MemoryHeuristics
 {
     private readonly Ipfd.Ipfd _ipfd;
 
-    [Signature("E8 ?? ?? ?? ?? 48 89 5D A0 48 8B 4D B0")]
+    // Both stay 0 when their signature no longer matches; a throw here would fault the whole host at startup.
+    [Signature("E8 ?? ?? ?? ?? 48 C7 43 20 00 00 00 00 48 8B 3B 48", Fallibility = Fallibility.Fallible)]
     private nint _freeMemory = 0;
 
-    [Signature("E8 ?? ?? ?? ?? 48 8B C3 48 83 C4 ?? 5F 5D")]
+    [Signature("E8 ?? ?? ?? ?? 33 DB 39 58 18 74 09 39", Fallibility = Fallibility.Fallible)]
     private nint _freeMemory2 = 0;
 
     public MemoryHeuristics(Ipfd.Ipfd ipfd, IGameInteropProvider gameInteropProvider)
     {
         _ipfd = ipfd;
         gameInteropProvider.InitializeFromAttributes(this);
+
+        var missing = (_freeMemory == 0 ? 1 : 0) + (_freeMemory2 == 0 ? 1 : 0);
+        if (missing > 0) {
+            Plugin.Log?.Warning(
+                $"MemoryHeuristics: {missing} of 2 free-memory functions are not available in this game version "
+              + "(signature not found); class sizes estimated from destructors will be "
+              + (missing == 2 ? "unavailable" : "incomplete")
+              + ", everything else keeps working."
+            );
+        }
     }
 
     public static nint PageBase(nint address)
@@ -136,7 +147,7 @@ public sealed class MemoryHeuristics
 
             if (size.HasValue && instr.FlowControl is FlowControl.Call) {
                 var callee = (nint)instr.MemoryDisplacement64;
-                if (callee == _freeMemory || callee == _freeMemory2) {
+                if (callee != 0 && (callee == _freeMemory || callee == _freeMemory2)) {
                     return (size.Value, 0);
                 }
             }

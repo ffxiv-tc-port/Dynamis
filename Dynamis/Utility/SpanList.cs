@@ -28,8 +28,12 @@ public ref struct SpanList<T>(Span<T> span)
     public void Clear()
         => _count = 0;
 
+    // 上游原本寫 AsSpan().Contains(item) / .IndexOf(item)。那兩個 MemoryExtensions 多載
+    // 要求 T : IEquatable<T>，而 SpanList<T> 沒有這個約束——上游能編過是因為它跟著
+    // Dalamud.NET.Sdk 15 走 net10.0，該版 BCL 放寬了這個約束。API13 這側是舊 BCL，
+    // 會噴 CS0314。改用 EqualityComparer<T>.Default 手動比對，不必更動公開型別簽章。
     public bool Contains(T item)
-        => AsSpan().Contains(item);
+        => IndexOf(item) >= 0;
 
     public Span<T> AsSpan()
         => _span[.._count];
@@ -48,7 +52,17 @@ public ref struct SpanList<T>(Span<T> span)
     }
 
     public int IndexOf(T item)
-        => AsSpan().IndexOf(item);
+    {
+        var span = AsSpan();
+        var comparer = EqualityComparer<T>.Default;
+        for (var i = 0; i < span.Length; i++) {
+            if (comparer.Equals(span[i], item)) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 
     public void Insert(int index, T item)
     {

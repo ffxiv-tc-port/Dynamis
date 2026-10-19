@@ -1,145 +1,131 @@
-name: Create Release
+name: Release
 
 on:
-  push:
-    tags-ignore:
-      - testing_*
-
+  workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows, X64]
     steps:
-      - uses: actions/checkout@v6
+      - name: 取 App token（runner 本機私鑰，private 子模組 checkout 用）
+        id: app
+        shell: pwsh
+        run: |
+          $keyPath = 'D:\ffxiv-tc-port\tctoolbox-app.pem'
+          if (-not (Test-Path -LiteralPath $keyPath)) { throw "App private key not found on this runner: $keyPath" }
+          function B64Url([byte[]]$b) { [Convert]::ToBase64String($b).TrimEnd('=').Replace('+', '-').Replace('/', '_') }
+          $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+          $hdr = B64Url ([Text.Encoding]::UTF8.GetBytes('{"alg":"RS256","typ":"JWT"}'))
+          $pl = B64Url ([Text.Encoding]::UTF8.GetBytes('{"iat":' + ($now - 60) + ',"exp":' + ($now + 540) + ',"iss":"4448133"}'))
+          $rsa = [System.Security.Cryptography.RSA]::Create()
+          $rsa.ImportFromPem((Get-Content -LiteralPath $keyPath -Raw))
+          $sig = $rsa.SignData([Text.Encoding]::UTF8.GetBytes("$hdr.$pl"), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+          $h = @{ Authorization = "Bearer $hdr.$pl.$(B64Url $sig)"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
+          $inst = @(Invoke-RestMethod -Headers $h -Uri 'https://api.github.com/app/installations') | Where-Object { $_.account.login -eq 'ffxiv-tc-port' }
+          if (-not $inst) { throw 'App 4448133 has no installation on org ffxiv-tc-port' }
+          $tok = (Invoke-RestMethod -Method Post -Headers $h -Uri "https://api.github.com/app/installations/$($inst[0].id)/access_tokens").token
+          if (-not $tok) { throw 'installation access token is empty' }
+          Write-Host "::add-mask::$tok"
+          "token=$tok" >> $env:GITHUB_OUTPUT
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          token: ${{ steps.app.outputs.token }}
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1.10.1
-
-      - name: Setup .NET
+        with:
+          # ipfd/.cargo/config.toml 釘死 x86_64-pc-windows-gnu；self-hosted 機器沒有外部 gcc，
+          # 只有 gnu host toolchain 自帶的 MinGW 連結器能連（msvc host 加 gnu target 會 E0463）。
+          toolchain: stable-x86_64-pc-windows-gnu
+          # rust-cache 的 post 步驟會清 CARGO_HOME/bin 裡「它沒記到」的檔——機器層 rustup 1.29 的代理是
+          # symlink，rustup.exe 本體因此被當多餘檔刪掉，下一顆 job 直接 rustup: command not found。self-hosted 不需要這個快取。
+          cache: false
+      - name: Install .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.x.x'
-
+          dotnet-version: |
+            9.x
+            10.x
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}/dotnet
+      - name: Download Dalamud (pinned TC-compatible build)
+        shell: pwsh
+        run: |
+          $pin = 'D:\ffxiv-tc-port\dalamud-pins\dalamud-pin-v13.0.0.17\dalamud-api13-net9.zip'
+          if (-not (Test-Path -LiteralPath $pin)) { throw "pinned Dalamud not found on this runner: $pin" }
+          Copy-Item -LiteralPath $pin -Destination dalamud-pinned.zip
+          Expand-Archive -Force dalamud-pinned.zip "$env:RUNNER_TEMP\dalamud-pinned\"
       - name: Restore dependencies
         run: dotnet restore
-
-      - name: Download Dalamud
-        run: |
-          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
-          Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
-
-      - name: Build IPFD
+      - name: Build IPFD (Rust)
         working-directory: ipfd
+        run: cargo build --release
+      - name: Compute version
+        shell: pwsh
         run: |
-          cargo build --release
-
+          $ver = "${{ github.ref_name }}" -replace '^v'
+          "VER=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Build plugin (No SMA)
+        run: dotnet build Dynamis/Dynamis.csproj --configuration Release --nologo -p:Version=${{ env.VER }} -p:AssemblyVersion=${{ env.VER }} -p:FileVersion=${{ env.VER }} -p:DalamudLibPath="$env:RUNNER_TEMP\dalamud-pinned\"
+      - name: write version into manifest (No SMA)
+        shell: pwsh
         run: |
-          $ver = '${{ github.ref_name }}'
-          invoke-expression 'dotnet build --configuration Release --nologo -p:Version=$ver -p:FileVersion=$ver -p:AssemblyVersion=$ver'
-
-      - name: Write version into JSON (No SMA)
-        run: |
-          $ver = '${{ github.ref_name }}'
-          $path = './Dynamis/bin/x64/Release/Dynamis.json'
+          $path = './Dynamis/bin/Release/Dynamis.json'
           $json = Get-Content -Raw $path | ConvertFrom-Json
-          $json.AssemblyVersion = $ver
-          $content = $json | ConvertTo-Json
-          set-content -Path $path -Value $content
-
-      - name: Upload a Build Artifact (No SMA)
-        uses: actions/upload-artifact@v6
-        with:
-          name: artifact-no-sma
-          path: |
-            ./Dynamis/bin/x64/Release/*
-
-      - name: Build plugin (With SMA)
+          $json.AssemblyVersion = "${{ env.VER }}"
+          $json | ConvertTo-Json | Set-Content -Path $path
+      - name: 移除發佈檔裡的其他平台原生檔（No SMA）
+        shell: pwsh
         run: |
-          $ver = '${{ github.ref_name }}'
-          invoke-expression 'dotnet build --configuration ReleaseWithSMA --nologo -p:Version=$ver -p:FileVersion=$ver -p:AssemblyVersion=$ver'
+          $ErrorActionPreference = 'Stop'
+          $runtimesDir = 'Dynamis/bin/Release/runtimes'
 
-      - name: Write version into JSON (With SMA)
-        run: |
-          $ver = '${{ github.ref_name }}'
-          $path = './Dynamis/bin/x64/ReleaseWithSMA/DynamisWithSMA.json'
-          $json = Get-Content -Raw $path | ConvertFrom-Json
-          $json.AssemblyVersion = $ver
-          $content = $json | ConvertTo-Json
-          set-content -Path $path -Value $content
-
-      - name: Upload a Build Artifact (With SMA)
-        uses: actions/upload-artifact@v6
-        with:
-          name: artifact-with-sma
-          path: |
-            ./Dynamis/bin/x64/ReleaseWithSMA/*
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Dynamis ${{ github.ref }}
-          draft: false
-          prerelease: false
-
+          # 這個組態沒有 PowerShell 相依，唯一會帶進來的其他平台資料夾是
+          # browser（System.Text.Encodings.Web 的 WASM 版本，win-x64 用不到）。
+          # 只留 win／win-x64，不點名其他資料夾一律刪，避免漏掉某個平台變體。
+          if (Test-Path -LiteralPath $runtimesDir) {
+              Get-ChildItem -LiteralPath $runtimesDir -Directory |
+                  Where-Object { $_.Name -notin @('win', 'win-x64') } |
+                  Remove-Item -Recurse -Force
+          }
       - name: Archive (No SMA)
-        run: Compress-Archive -Path Dynamis/bin/x64/Release/* -DestinationPath Dynamis.zip
-
-      - name: Upload Release Asset (No SMA)
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./Dynamis.zip
-          asset_name: Dynamis.zip
-          asset_content_type: application/zip
-
-      - name: Archive (With SMA)
-        run: Compress-Archive -Path Dynamis/bin/x64/ReleaseWithSMA/* -DestinationPath DynamisWithSMA.zip
-
-      - name: Upload Release Asset (With SMA)
-        id: upload-release-asset-with-sma
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./DynamisWithSMA.zip
-          asset_name: DynamisWithSMA.zip
-          asset_content_type: application/zip
-
-      - name: Write out repo.json
+        run: Compress-Archive -Path Dynamis/bin/Release/* -DestinationPath Dynamis.zip
+      - name: Build plugin (With SMA)
+        run: dotnet build Dynamis/Dynamis.csproj --configuration ReleaseWithSMA --nologo -p:Version=${{ env.VER }} -p:AssemblyVersion=${{ env.VER }} -p:FileVersion=${{ env.VER }} -p:DalamudLibPath="$env:RUNNER_TEMP\dalamud-pinned\"
+      - name: write version into manifest (With SMA)
+        shell: pwsh
         run: |
-          $ver = '${{ github.ref_name }}'
-          $path = './repo.json'
-          git fetch origin dalamondieu
-          git reset --hard HEAD
-          git checkout dalamondieu
+          $path = './Dynamis/bin/ReleaseWithSMA/DynamisWithSMA.json'
           $json = Get-Content -Raw $path | ConvertFrom-Json
-          $json[0].AssemblyVersion = $ver
-          $json[0].TestingAssemblyVersion = $ver
-          $json[0].DownloadLinkInstall = $json[0].DownloadLinkInstall -replace '[^/]+/Dynamis.zip',"$ver/Dynamis.zip"
-          $json[0].DownloadLinkTesting = $json[0].DownloadLinkTesting -replace '[^/]+/Dynamis.zip',"$ver/Dynamis.zip"
-          $json[0].DownloadLinkUpdate = $json[0].DownloadLinkUpdate -replace '[^/]+/Dynamis.zip',"$ver/Dynamis.zip"
-          $json[1].AssemblyVersion = $ver
-          $json[1].TestingAssemblyVersion = $ver
-          $json[1].DownloadLinkInstall = $json[1].DownloadLinkInstall -replace '[^/]+/DynamisWithSMA.zip',"$ver/DynamisWithSMA.zip"
-          $json[1].DownloadLinkTesting = $json[1].DownloadLinkTesting -replace '[^/]+/DynamisWithSMA.zip',"$ver/DynamisWithSMA.zip"
-          $json[1].DownloadLinkUpdate = $json[1].DownloadLinkUpdate -replace '[^/]+/DynamisWithSMA.zip',"$ver/DynamisWithSMA.zip"
-          $content = $json | ConvertTo-Json -AsArray
-          set-content -Path $path -Value $content
-
-      - name: Commit repo.json
+          $json.AssemblyVersion = "${{ env.VER }}"
+          $json | ConvertTo-Json | Set-Content -Path $path
+      - name: 移除發佈檔裡的其他平台原生檔（With SMA）
+        shell: pwsh
         run: |
-          git config --global user.name "Actions User"
-          git config --global user.email "actions@github.com"
-          git add repo.json
-          git commit -m "[CI] Updating repo.json for ${{ github.ref_name }}" || true
-          git push origin dalamondieu
+          $ErrorActionPreference = 'Stop'
+          $runtimesDir = 'Dynamis/bin/ReleaseWithSMA/runtimes'
+
+          # PowerShell（System.Management.Automation）的 nuget 包把 unix／linux／osx 與
+          # win-arm、win-arm64、win-x86 的版本都帶進來；win-x64 用的是 win 資料夾裡
+          # 受管理組件的那份（System.Management.Automation.dll 等在 win 底下也有一份），
+          # 只留 win／win-x64，不點名其他資料夾一律刪，避免漏掉某個平台變體。
+          if (Test-Path -LiteralPath $runtimesDir) {
+              Get-ChildItem -LiteralPath $runtimesDir -Directory |
+                  Where-Object { $_.Name -notin @('win', 'win-x64') } |
+                  Remove-Item -Recurse -Force
+          }
+      - name: Archive (With SMA)
+        run: Compress-Archive -Path Dynamis/bin/ReleaseWithSMA/* -DestinationPath DynamisWithSMA.zip
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: |
+            Dynamis.zip
+            Dynamis/bin/Release/Dynamis.json
+            DynamisWithSMA.zip
+            Dynamis/bin/ReleaseWithSMA/DynamisWithSMA.json
+          generate_release_notes: true
