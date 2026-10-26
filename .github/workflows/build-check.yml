@@ -63,3 +63,4 @@ jobs:
         run: dotnet build Dynamis/Dynamis.csproj --configuration Release --nologo -p:DalamudLibPath="$env:RUNNER_TEMP\dalamud-pinned\"
       - name: Build plugin (With SMA)
         run: dotnet build Dynamis/Dynamis.csproj --configuration ReleaseWithSMA --nologo -p:DalamudLibPath="$env:RUNNER_TEMP\dalamud-pinned\"
+# workflow re-registration trigger 2026-10-26T17:45:50Z

@@ -129,3 +129,4 @@ jobs:
             DynamisWithSMA.zip
             Dynamis/bin/ReleaseWithSMA/DynamisWithSMA.json
           generate_release_notes: true
+# workflow re-registration trigger 2026-10-26T17:45:50Z
